@@ -1,8 +1,8 @@
-export type UserRole = "ADMIN" | "USER" | "SUPERADMIN";
+export type UserRole = "ADMIN" | "USER";
 
 export interface JwtUser {
   id: string;
-  email: string;
+  email?: string | null;
   role: UserRole;
-  orgId?: string;
+  orgId?: string | null;
 }
