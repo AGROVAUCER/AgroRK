@@ -129,7 +129,7 @@ async function main() {
   const opPrskanje = operationRecords.find((o) => o.name === "Prskanje");
   const opSetva = operationRecords.find((o) => o.name === "Setva");
 
-  await prisma.entry.createMany({
+  await prisma.workEntry.createMany({
     data: [
       {
         date: today,

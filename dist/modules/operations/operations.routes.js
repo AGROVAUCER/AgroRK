@@ -1,0 +1,15 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_1 = require("../../middleware/auth");
+const orgScope_1 = require("../../middleware/orgScope");
+const validate_1 = require("../../utils/validate");
+const operations_schemas_1 = require("./operations.schemas");
+const operations_controller_1 = require("./operations.controller");
+const router = (0, express_1.Router)();
+router.use((0, auth_1.auth)({ optional: true }), orgScope_1.orgScope);
+router.get("/", operations_controller_1.getOperations);
+router.post("/", (0, validate_1.validate)(operations_schemas_1.createOperationSchema), operations_controller_1.postOperation);
+router.put("/:id", (0, validate_1.validate)(operations_schemas_1.updateOperationSchema), operations_controller_1.putOperation);
+router.delete("/:id", operations_controller_1.removeOperation);
+exports.default = router;
