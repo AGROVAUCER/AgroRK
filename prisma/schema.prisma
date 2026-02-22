@@ -1,0 +1,157 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMIN
+  USER
+  SUPERADMIN
+}
+
+enum WorkType {
+  Rad
+  Usluga
+}
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  plan      String? 
+  status    String? 
+  users     User[]
+  fields    Field[]
+  crops     Crop[]
+  clients   Client[]
+  operations Operation[]
+  executors Executor[]
+  entries   WorkEntry[]
+  yields    Yield[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  role      Role
+  orgId     String?
+  org       Organization? @relation(fields: [orgId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Field {
+  id            String   @id @default(uuid())
+  name          String
+  area          Float
+  unit          String
+  aliases       Json?
+  currentCropId String?
+  orgId         String
+  org           Organization @relation(fields: [orgId], references: [id])
+  entries       WorkEntry[]
+  yields        Yield[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([name, orgId], name: "name_orgId")
+}
+
+model Client {
+  id        String   @id @default(uuid())
+  name      String
+  phone     String?
+  location  String?
+  aliases   Json?
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id])
+  entries   WorkEntry[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([name, orgId], name: "name_orgId")
+}
+
+model Operation {
+  id      String   @id @default(uuid())
+  name    String
+  type    String
+  aliases Json?
+  orgId   String
+  org     Organization @relation(fields: [orgId], references: [id])
+  entries WorkEntry[]
+
+  @@unique([name, orgId], name: "name_orgId")
+}
+
+model Crop {
+  id      String   @id @default(uuid())
+  name    String
+  aliases Json?
+  orgId   String
+  org     Organization @relation(fields: [orgId], references: [id])
+  entries WorkEntry[]
+  yields  Yield[]
+
+  @@unique([name, orgId], name: "name_orgId")
+}
+
+model Executor {
+  id      String   @id @default(uuid())
+  name    String
+  aliases Json?
+  orgId   String
+  org     Organization @relation(fields: [orgId], references: [id])
+  entries WorkEntry[]
+
+  @@unique([name, orgId], name: "name_orgId")
+}
+
+model WorkEntry {
+  id          String    @id @default(uuid())
+  date        DateTime
+  type        WorkType
+  fieldId     String?
+  field       Field?    @relation(fields: [fieldId], references: [id])
+  clientId    String?
+  client      Client?   @relation(fields: [clientId], references: [id])
+  operationId String
+  operation   Operation @relation(fields: [operationId], references: [id])
+  cropId      String?
+  crop        Crop?     @relation(fields: [cropId], references: [id])
+  executorId  String?
+  executor    Executor? @relation(fields: [executorId], references: [id])
+  quantity    Float?
+  unit        String?
+  status      String
+  source      String?
+  voiceText   String?
+  notes       String?
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Yield {
+  id          String   @id @default(uuid())
+  year        Int
+  fieldId     String
+  field       Field   @relation(fields: [fieldId], references: [id])
+  cropId      String
+  crop        Crop    @relation(fields: [cropId], references: [id])
+  area        Float
+  totalYield  Float
+  yieldPerUnit Float
+  notes       String?
+  orgId       String
+  org         Organization @relation(fields: [orgId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
