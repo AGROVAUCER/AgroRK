@@ -2,8 +2,8 @@ import * as z from "zod";
 
 const envSchema = z.object({
   PORT: z.coerce.number().default(4000),
-  DATABASE_URL: z.string().default("file:./dev.db"),
-  JWT_SECRET: z.string().default("super-secret-key"),
+  DATABASE_URL: z.string().url(),
+  JWT_SECRET: z.string().min(20),
   SUPERADMIN_EMAIL: z.string().email().default("admin@agro.local"),
   SUPERADMIN_PASSWORD: z.string().default("admin123"),
 });
