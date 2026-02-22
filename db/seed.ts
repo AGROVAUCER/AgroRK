@@ -31,18 +31,18 @@ async function main() {
   ];
 
   const operations = [
-    { name: "Oranje", type: "Oba" },
-    { name: "Setva", type: "Oba" },
-    { name: "Prskanje", type: "Oba" },
-    { name: "Žetva", type: "Oba" },
-    { name: "Transport", type: "Usluga" },
-    { name: "Špartanje", type: "Oba" },
-    { name: "Gruberovanje", type: "Oba" },
-    { name: "Podrivanje", type: "Oba" },
-    { name: "Tanjiranje", type: "Oba" },
-    { name: "Zalivanje", type: "Oba" },
-    { name: "Branje", type: "Oba" },
-    { name: "Baliranje", type: "Oba" },
+    { name: "Oranje", applyTo: "BOTH" },
+    { name: "Setva", applyTo: "BOTH" },
+    { name: "Prskanje", applyTo: "BOTH" },
+    { name: "Žetva", applyTo: "BOTH" },
+    { name: "Transport", applyTo: "SERVICE" },
+    { name: "Špartanje", applyTo: "BOTH" },
+    { name: "Gruberovanje", applyTo: "BOTH" },
+    { name: "Podrivanje", applyTo: "BOTH" },
+    { name: "Tanjiranje", applyTo: "BOTH" },
+    { name: "Zalivanje", applyTo: "BOTH" },
+    { name: "Branje", applyTo: "BOTH" },
+    { name: "Baliranje", applyTo: "BOTH" },
   ];
 
   const fields = [
@@ -77,8 +77,19 @@ async function main() {
     operations.map((op) =>
       prisma.operation.upsert({
         where: { name_orgId: { name: op.name, orgId: org.id } },
-        update: {},
-        create: { name: op.name, type: op.type, orgId: org.id },
+        update: {
+          applyTo: op.applyTo,
+          canonicalKey: op.canonicalKey ?? op.name.toLowerCase(),
+          userName: op.userName ?? op.name,
+        },
+        create: {
+          name: op.name,
+          applyTo: op.applyTo,
+          canonicalKey: op.canonicalKey ?? op.name.toLowerCase(),
+          userName: op.userName ?? op.name,
+          aliases: op.aliases ?? [],
+          orgId: org.id,
+        },
       })
     )
   );
@@ -93,6 +104,7 @@ async function main() {
           name: f.name,
           area: f.area,
           unit: f.unit,
+          aliases: f.aliases ?? [],
           currentCropId: cropId,
           orgId: org.id,
         },
@@ -105,7 +117,7 @@ async function main() {
       prisma.client.upsert({
         where: { name_orgId: { name: c.name, orgId: org.id } },
         update: {},
-        create: { name: c.name, phone: c.phone, location: c.location, orgId: org.id },
+        create: { name: c.name, phone: c.phone, location: c.location, aliases: c.aliases ?? [], orgId: org.id },
       })
     )
   );
@@ -115,10 +127,25 @@ async function main() {
       prisma.executor.upsert({
         where: { name_orgId: { name: ex.name, orgId: org.id } },
         update: {},
-        create: { name: ex.name, orgId: org.id },
+        create: { name: ex.name, aliases: ex.aliases ?? [], orgId: org.id },
       })
     )
   );
+
+  // Default admin user (needed for createdByUserId)
+  const adminUser = await prisma.user.upsert({
+    where: { email: "user@agro.local" },
+    update: { name: "Default Admin", passwordHash: "$2a$10$U5frAzlZk90un0nLBKBP/.ZiY4QmiFjCwXTlzAIXazhbugzuDUFcW", role: "ADMIN", isActive: true, orgId: org.id },
+    create: {
+      name: "Default Admin",
+      email: "user@agro.local",
+      phone: "000-0000",
+      passwordHash: "$2a$10$U5frAzlZk90un0nLBKBP/.ZiY4QmiFjCwXTlzAIXazhbugzuDUFcW", // "password123"
+      role: "ADMIN",
+      isActive: true,
+      orgId: org.id,
+    },
+  });
 
   // Sample entries
   const today = new Date();
@@ -133,54 +160,59 @@ async function main() {
     data: [
       {
         date: today,
-        type: "Rad",
+        entryType: "WORK",
         fieldId: fieldRecords[0].id,
         operationId: opOranje?.id || operationRecords[0].id,
         executorId: executorRecords[0].id,
-        status: "Zavrseno",
-        source: "Web",
+        status: "DONE",
+        source: "WEB",
         quantity: 5.5,
         unit: "ha",
-        notes: "Završeno pre kiše",
+        note: "Završeno pre kiše",
+        createdByUserId: adminUser.id,
         orgId: org.id,
       },
       {
         date: today,
-        type: "Usluga",
+        entryType: "SERVICE",
         clientId: clientRecords[0].id,
         operationId: opPrskanje?.id || operationRecords[2].id,
         cropId: cropRecords.find((c) => c.name === "Kukuruz")?.id,
         executorId: executorRecords[1].id,
-        status: "U toku",
-        source: "Voice",
+        status: "IN_PROGRESS",
+        source: "VOICE",
         quantity: 10,
         unit: "ha",
-        notes: "Pera prska kod Jovana",
+        note: "Pera prska kod Jovana",
+        voiceOriginalText: "Pera prska kod Jovana",
+        createdByUserId: adminUser.id,
         orgId: org.id,
       },
       {
         date: yesterday,
-        type: "Rad",
+        entryType: "WORK",
         fieldId: fieldRecords[1].id,
         operationId: opSetva?.id || operationRecords[1].id,
         cropId: cropRecords.find((c) => c.name === "Soja")?.id,
         executorId: executorRecords[0].id,
-        status: "Zavrseno",
-        source: "Web",
+        status: "DONE",
+        source: "WEB",
         quantity: 2.3,
         unit: "ha",
+        createdByUserId: adminUser.id,
         orgId: org.id,
       },
       {
         date: twoDaysAgo,
-        type: "Usluga",
+        entryType: "SERVICE",
         clientId: clientRecords[1].id,
         operationId: operationRecords.find((o) => o.name === "Transport")?.id || operationRecords[4].id,
         executorId: executorRecords[2].id,
-        status: "Zavrseno",
-        source: "Web",
+        status: "DONE",
+        source: "WEB",
         quantity: 8,
         unit: "sati",
+        createdByUserId: adminUser.id,
         orgId: org.id,
       },
     ],
@@ -195,7 +227,7 @@ async function main() {
         cropId: cropRecords.find((c) => c.name === "Pšenica")?.id || cropRecords[0].id,
         area: 5.5,
         totalYield: 33000,
-        yieldPerUnit: 6000,
+        note: null,
         orgId: org.id,
       },
       {
@@ -204,23 +236,11 @@ async function main() {
         cropId: cropRecords.find((c) => c.name === "Soja")?.id || cropRecords[2].id,
         area: 2.3,
         totalYield: 8050,
-        yieldPerUnit: 3500,
+        note: null,
         orgId: org.id,
       },
     ],
     skipDuplicates: true,
-  });
-
-  // Default admin user
-  await prisma.user.upsert({
-    where: { email: "user@agro.local" },
-    update: {},
-    create: {
-      email: "user@agro.local",
-      password: "$2a$10$U5frAzlZk90un0nLBKBP/.ZiY4QmiFjCwXTlzAIXazhbugzuDUFcW", // "password123"
-      role: "ADMIN",
-      orgId: org.id,
-    },
   });
 
   console.log("Seed completed");

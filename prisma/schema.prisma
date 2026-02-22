@@ -10,44 +10,63 @@ generator client {
 enum Role {
   ADMIN
   USER
-  SUPERADMIN
 }
 
-enum WorkType {
-  Rad
-  Usluga
+enum EntryType {
+  WORK
+  SERVICE
+}
+
+enum EntryStatus {
+  IN_PROGRESS
+  DONE
+}
+
+enum EntrySource {
+  VOICE
+  WEB
+}
+
+enum OperationApplyTo {
+  WORK
+  SERVICE
+  BOTH
 }
 
 model Organization {
-  id        String   @id @default(uuid())
-  name      String
-  plan      String? 
-  status    String? 
-  users     User[]
-  fields    Field[]
-  crops     Crop[]
-  clients   Client[]
+  id         String      @id @default(uuid())
+  name       String
+  plan       String?
+  status     String?
+  users      User[]
+  fields     Field[]
+  crops      Crop[]
+  clients    Client[]
   operations Operation[]
-  executors Executor[]
-  entries   WorkEntry[]
-  yields    Yield[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  executors  Executor[]
+  entries    WorkEntry[]
+  yields     Yield[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  role      Role
-  orgId     String?
-  org       Organization? @relation(fields: [orgId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String        @id @default(uuid())
+  name         String
+  email        String?       @unique
+  phone        String?
+  passwordHash String
+  role         Role
+  isActive     Boolean       @default(true)
+  orgId        String?
+  org          Organization? @relation(fields: [orgId], references: [id])
+  entries      WorkEntry[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 }
 
 model Field {
-  id            String   @id @default(uuid())
+  id            String       @id @default(uuid())
   name          String
   area          Float
   unit          String
@@ -57,14 +76,14 @@ model Field {
   org           Organization @relation(fields: [orgId], references: [id])
   entries       WorkEntry[]
   yields        Yield[]
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
   @@unique([name, orgId], name: "name_orgId")
 }
 
 model Client {
-  id        String   @id @default(uuid())
+  id        String       @id @default(uuid())
   name      String
   phone     String?
   location  String?
@@ -72,26 +91,29 @@ model Client {
   orgId     String
   org       Organization @relation(fields: [orgId], references: [id])
   entries   WorkEntry[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 
   @@unique([name, orgId], name: "name_orgId")
 }
 
 model Operation {
-  id      String   @id @default(uuid())
-  name    String
-  type    String
-  aliases Json?
-  orgId   String
-  org     Organization @relation(fields: [orgId], references: [id])
-  entries WorkEntry[]
+  id           String           @id @default(uuid())
+  name         String
+  canonicalKey String
+  applyTo      OperationApplyTo
+  userName     String
+  aliases      Json?
+  orgId        String
+  org          Organization     @relation(fields: [orgId], references: [id])
+  entries      WorkEntry[]
 
+  @@unique([orgId, canonicalKey])
   @@unique([name, orgId], name: "name_orgId")
 }
 
 model Crop {
-  id      String   @id @default(uuid())
+  id      String       @id @default(uuid())
   name    String
   aliases Json?
   orgId   String
@@ -103,7 +125,7 @@ model Crop {
 }
 
 model Executor {
-  id      String   @id @default(uuid())
+  id      String       @id @default(uuid())
   name    String
   aliases Json?
   orgId   String
@@ -114,44 +136,52 @@ model Executor {
 }
 
 model WorkEntry {
-  id          String    @id @default(uuid())
-  date        DateTime
-  type        WorkType
-  fieldId     String?
-  field       Field?    @relation(fields: [fieldId], references: [id])
-  clientId    String?
-  client      Client?   @relation(fields: [clientId], references: [id])
-  operationId String
-  operation   Operation @relation(fields: [operationId], references: [id])
-  cropId      String?
-  crop        Crop?     @relation(fields: [cropId], references: [id])
-  executorId  String?
-  executor    Executor? @relation(fields: [executorId], references: [id])
-  quantity    Float?
-  unit        String?
-  status      String
-  source      String?
-  voiceText   String?
-  notes       String?
-  orgId       String
-  org         Organization @relation(fields: [orgId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                String       @id @default(uuid())
+  date              DateTime
+  entryType         EntryType
+  fieldId           String?
+  field             Field?       @relation(fields: [fieldId], references: [id])
+  clientId          String?
+  client            Client?      @relation(fields: [clientId], references: [id])
+  operationId       String
+  operation         Operation    @relation(fields: [operationId], references: [id])
+  cropId            String?
+  crop              Crop?        @relation(fields: [cropId], references: [id])
+  executorId        String?
+  executor          Executor?    @relation(fields: [executorId], references: [id])
+  quantity          Float?
+  unit              String?
+  status            EntryStatus
+  note              String?
+  source            EntrySource
+  voiceOriginalText String?
+  createdByUserId   String
+  createdBy         User         @relation(fields: [createdByUserId], references: [id])
+  orgId             String
+  org               Organization @relation(fields: [orgId], references: [id])
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@index([orgId, date])
+  @@index([orgId, entryType])
+  @@index([orgId, fieldId])
+  @@index([orgId, clientId])
+  @@index([orgId, operationId])
+  @@index([orgId, status])
 }
 
 model Yield {
-  id          String   @id @default(uuid())
-  year        Int
-  fieldId     String
-  field       Field   @relation(fields: [fieldId], references: [id])
-  cropId      String
-  crop        Crop    @relation(fields: [cropId], references: [id])
-  area        Float
-  totalYield  Float
-  yieldPerUnit Float
-  notes       String?
-  orgId       String
-  org         Organization @relation(fields: [orgId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String       @id @default(uuid())
+  year       Int
+  fieldId    String
+  field      Field        @relation(fields: [fieldId], references: [id])
+  cropId     String
+  crop       Crop         @relation(fields: [cropId], references: [id])
+  area       Float
+  totalYield Float
+  note       String?
+  orgId      String
+  org        Organization @relation(fields: [orgId], references: [id])
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
 }
