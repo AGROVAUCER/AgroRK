@@ -11,8 +11,8 @@ export const createOperationSchema = z.object({
 export const updateOperationSchema = z.object({
   params: z.object({ id: z.string() }),
   body: z.object({
-    name: z.string().min(1).optional(),
-    type: z.string().min(1).optional(),
+    userName: z.string().min(1).optional(),
+    applyTo: z.enum(["WORK", "SERVICE", "BOTH"]).optional(),
     aliases: z.array(z.string()).optional(),
   }),
 });

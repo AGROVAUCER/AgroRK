@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { prisma } from "./prisma";
+import { OperationApplyTo } from "@prisma/client";
 
 const defaultOrgId = "default-org";
 
@@ -30,36 +31,42 @@ async function main() {
     { name: "Kupus" },
   ];
 
-  const operations = [
-    { name: "Oranje", applyTo: "BOTH" },
-    { name: "Setva", applyTo: "BOTH" },
-    { name: "Prskanje", applyTo: "BOTH" },
-    { name: "Žetva", applyTo: "BOTH" },
-    { name: "Transport", applyTo: "SERVICE" },
-    { name: "Špartanje", applyTo: "BOTH" },
-    { name: "Gruberovanje", applyTo: "BOTH" },
-    { name: "Podrivanje", applyTo: "BOTH" },
-    { name: "Tanjiranje", applyTo: "BOTH" },
-    { name: "Zalivanje", applyTo: "BOTH" },
-    { name: "Branje", applyTo: "BOTH" },
-    { name: "Baliranje", applyTo: "BOTH" },
+  const operations: {
+    name: string;
+    applyTo: OperationApplyTo;
+    canonicalKey: string;
+    userName: string;
+    aliases: string[];
+  }[] = [
+    { name: "Oranje", applyTo: "BOTH", canonicalKey: "PLOWING", userName: "Oranje", aliases: [] },
+    { name: "Setva", applyTo: "BOTH", canonicalKey: "SOWING", userName: "Setva", aliases: [] },
+    { name: "Prskanje", applyTo: "BOTH", canonicalKey: "SPRAYING", userName: "Prskanje", aliases: [] },
+    { name: "Žetva", applyTo: "BOTH", canonicalKey: "HARVEST", userName: "Žetva", aliases: [] },
+    { name: "Transport", applyTo: "SERVICE", canonicalKey: "TRANSPORT", userName: "Transport", aliases: [] },
+    { name: "Špartanje", applyTo: "BOTH", canonicalKey: "CULTIVATION", userName: "Špartanje", aliases: [] },
+    { name: "Gruberovanje", applyTo: "BOTH", canonicalKey: "GRUBER", userName: "Gruberovanje", aliases: [] },
+    { name: "Podrivanje", applyTo: "BOTH", canonicalKey: "SUBSOILING", userName: "Podrivanje", aliases: [] },
+    { name: "Tanjiranje", applyTo: "BOTH", canonicalKey: "DISKING", userName: "Tanjiranje", aliases: [] },
+    { name: "Zalivanje", applyTo: "BOTH", canonicalKey: "IRRIGATION", userName: "Zalivanje", aliases: [] },
+    { name: "Branje", applyTo: "BOTH", canonicalKey: "PICKING", userName: "Branje", aliases: [] },
+    { name: "Baliranje", applyTo: "BOTH", canonicalKey: "BALING", userName: "Baliranje", aliases: [] },
   ];
 
   const fields = [
-    { name: "Velika Njiva", area: 5.5, unit: "ha", currentCrop: "Pšenica" },
-    { name: "Mala Livada", area: 2.3, unit: "ha", currentCrop: "Kukuruz" },
-    { name: "Vinograd", area: 1.2, unit: "ha", currentCrop: "Suncokret" },
+    { name: "Velika Njiva", area: 5.5, unit: "ha", currentCrop: "Pšenica", aliases: [] },
+    { name: "Mala Livada", area: 2.3, unit: "ha", currentCrop: "Kukuruz", aliases: [] },
+    { name: "Vinograd", area: 1.2, unit: "ha", currentCrop: "Suncokret", aliases: [] },
   ];
 
   const clients = [
-    { name: "Jovan Jovanović", phone: "0641234567", location: "Novi Sad" },
-    { name: "Firma Agro", phone: "021123456", location: "Beograd" },
+    { name: "Jovan Jovanović", phone: "0641234567", location: "Novi Sad", aliases: [] },
+    { name: "Firma Agro", phone: "021123456", location: "Beograd", aliases: [] },
   ];
 
   const executors = [
-    { name: "Marko Marković" },
-    { name: "Petar Petrović" },
-    { name: "Zoran" },
+    { name: "Marko Marković", aliases: [] },
+    { name: "Petar Petrović", aliases: [] },
+    { name: "Zoran", aliases: [] },
   ];
 
   // Insert data

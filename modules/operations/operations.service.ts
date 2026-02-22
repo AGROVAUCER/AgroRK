@@ -11,7 +11,12 @@ export const createOperation = (orgId: string, data: any) => {
 };
 
 export const updateOperation = (orgId: string, id: string, data: any) => {
-  return prisma.operation.update({ where: { id, orgId }, data });
+  const updateData: any = {};
+  if (data.userName !== undefined) updateData.userName = data.userName;
+  if (data.applyTo !== undefined) updateData.applyTo = data.applyTo;
+  if (data.aliases !== undefined) updateData.aliases = data.aliases ?? [];
+  // name and canonicalKey are locked
+  return prisma.operation.update({ where: { id, orgId }, data: updateData });
 };
 
 export const deleteOperation = (orgId: string, id: string) => {
