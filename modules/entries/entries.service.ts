@@ -68,6 +68,28 @@ export const getEntry = (orgId: string, id: string) => {
   });
 };
 
+export const ensureEntryRules = async (orgId: string, data: any) => {
+  const entryType = data.entryType;
+  if (entryType === "WORK") {
+    if (!data.fieldId) throw { status: 400, message: "fieldId is required for WORK" };
+    data.clientId = null;
+  }
+  if (entryType === "SERVICE") {
+    if (!data.clientId) throw { status: 400, message: "clientId is required for SERVICE" };
+    data.fieldId = null;
+  }
+  if (!data.operationId) throw { status: 400, message: "operationId is required" };
+  if (!data.date) throw { status: 400, message: "date is required" };
+  if (!data.status) throw { status: 400, message: "status is required" };
+
+  // Sowing rule
+  const op = await prisma.operation.findFirst({ where: { id: data.operationId, orgId } });
+  if (!op) throw { status: 400, message: "Invalid operationId" };
+  if (op.canonicalKey?.toUpperCase() === "SOWING" && !data.cropId) {
+    throw { status: 400, message: "cropId is required for SOWING operation" };
+  }
+};
+
 export const createEntry = (orgId: string, createdByUserId: string, data: any) => {
   return prisma.workEntry.create({
     data: {

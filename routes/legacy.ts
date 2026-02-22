@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { prisma } from "../db/prisma";
-import { createEntry } from "../modules/entries/entries.service";
+import { createEntry, ensureEntryRules } from "../modules/entries/entries.service";
 
 const router = Router();
 
@@ -134,14 +134,16 @@ router.post("/api/entry", async (req, res, next) => {
     const orgId = resolveOrg(req);
     const body = req.body || {};
     const creatorId = req.user?.id ?? (await defaultCreator(orgId));
-    const entry = await createEntry(orgId, creatorId, {
+    const payload = {
       ...body,
       entryType: resolveEntryType(body.type || body.entryType),
       status: resolveStatus(body.status),
       source: resolveSource(body.source),
       note: body.notes ?? body.note,
       voiceOriginalText: body.voiceText ?? body.voiceOriginalText,
-    });
+    };
+    await ensureEntryRules(orgId, payload);
+    const entry = await createEntry(orgId, creatorId, payload);
     res.status(201).json(entry);
   } catch (err) {
     next(err);

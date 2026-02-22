@@ -1,26 +1,6 @@
 import { Request, Response } from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
-import { createEntry, deleteEntry, getEntry, listEntries, updateEntry } from "./entries.service";
-import { prisma } from "../../db/prisma";
-
-const ensureRules = async (orgId: string, data: any) => {
-  // entryType rules
-  if (data.entryType === "WORK") {
-    if (!data.fieldId) throw { status: 400, message: "fieldId is required for WORK" };
-    data.clientId = null;
-  }
-  if (data.entryType === "SERVICE") {
-    if (!data.clientId) throw { status: 400, message: "clientId is required for SERVICE" };
-    data.fieldId = null;
-  }
-
-  // operation rules
-  const op = await prisma.operation.findFirst({ where: { id: data.operationId, orgId } });
-  if (!op) throw { status: 400, message: "Invalid operationId" };
-  if (op.canonicalKey?.toUpperCase() === "SOWING" && !data.cropId) {
-    throw { status: 400, message: "cropId is required for SOWING" };
-  }
-};
+import { createEntry, deleteEntry, ensureEntryRules, getEntry, listEntries, updateEntry } from "./entries.service";
 
 export const getEntries = asyncHandler(async (req: Request, res: Response) => {
   const {
@@ -63,7 +43,7 @@ export const getEntryById = asyncHandler(async (req: Request, res: Response) => 
 
 export const postEntry = asyncHandler(async (req: Request, res: Response) => {
   const body = req.body;
-  await ensureRules(req.orgId!, body);
+  await ensureEntryRules(req.orgId!, body);
   const entry = await createEntry(req.orgId!, req.user!.id, {
     ...body,
     source: body.source || "WEB",
@@ -80,7 +60,7 @@ export const patchEntry = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const body = req.body;
-  await ensureRules(req.orgId!, { ...existing, ...body, entryType: body.entryType ?? existing.entryType });
+  await ensureEntryRules(req.orgId!, { ...existing, ...body, entryType: body.entryType ?? existing.entryType });
   const updated = await updateEntry(req.orgId!, req.params.id, body);
   res.json(updated);
 });
