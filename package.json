@@ -6,13 +6,13 @@
   "scripts": {
     "dev": "tsx watch server.ts",
     "start": "node dist/server.js",
-    "build": "prisma generate && tsc",
-    "postinstall": "prisma generate && yarn build",
+    "build": "tsc",
+    "postinstall": "yarn build",
     "prisma": "prisma",
     "seed": "ts-node db/seed.ts"
   },
   "dependencies": {
-    "@prisma/client": "5.18.0",
+    "@supabase/supabase-js": "^2.97.0",
     "bcryptjs": "2.4.3",
     "cors": "2.8.5",
     "dotenv": "16.4.5",
