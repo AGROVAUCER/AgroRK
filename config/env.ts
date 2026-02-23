@@ -1,24 +1,23 @@
-import * as z from "zod";
+import { z } from 'zod'
 
-const envSchema = z.object({
-  PORT: z.coerce.number().default(4000),
-  DATABASE_URL: z.string().url(),
-  JWT_SECRET: z.string().min(20),
-  SUPERADMIN_EMAIL: z.string().email().default("admin@agro.local"),
-  SUPERADMIN_PASSWORD: z.string().default("admin123"),
-});
+const EnvSchema = z.object({
+  NODE_ENV: z.string().optional(),
+  PORT: z.coerce.number().optional(),
 
-export type Env = z.infer<typeof envSchema>;
+  SUPABASE_URL: z.string().min(1),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
 
-let cachedEnv: Env | null = null;
+  JWT_SECRET: z.string().min(1),
+})
 
-export const loadEnv = (): Env => {
-  if (cachedEnv) return cachedEnv;
-  const parsed = envSchema.safeParse(process.env);
+export type Env = z.infer<typeof EnvSchema>
+
+export function loadEnv(): Env {
+  const parsed = EnvSchema.safeParse(process.env)
   if (!parsed.success) {
-    console.error("Invalid environment configuration", parsed.error.flatten());
-    throw new Error("Invalid environment variables");
+    // eslint-disable-next-line no-console
+    console.error('Invalid environment configuration', parsed.error.flatten())
+    throw new Error('Invalid environment variables')
   }
-  cachedEnv = parsed.data;
-  return cachedEnv;
-};
+  return parsed.data
+}
