@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { prisma } from "./prisma";
-import { OperationApplyTo } from "@prisma/client";
+import { EntrySource, EntryStatus, EntryType, OperationApplyTo } from "@prisma/client";
 
 const defaultOrgId = "default-org";
 
@@ -142,7 +142,13 @@ async function main() {
   // Default admin user (needed for createdByUserId)
   const adminUser = await prisma.user.upsert({
     where: { email: "user@agro.local" },
-    update: { name: "Default Admin", passwordHash: "$2a$10$U5frAzlZk90un0nLBKBP/.ZiY4QmiFjCwXTlzAIXazhbugzuDUFcW", role: "ADMIN", isActive: true, orgId: org.id },
+    update: {
+      name: "Default Admin",
+      passwordHash: "$2a$10$U5frAzlZk90un0nLBKBP/.ZiY4QmiFjCwXTlzAIXazhbugzuDUFcW",
+      role: "ADMIN",
+      isActive: true,
+      orgId: org.id,
+    },
     create: {
       name: "Default Admin",
       email: "user@agro.local",
@@ -167,12 +173,12 @@ async function main() {
     data: [
       {
         date: today,
-        entryType: "WORK",
+        entryType: EntryType.WORK,
         fieldId: fieldRecords[0].id,
         operationId: opOranje?.id || operationRecords[0].id,
         executorId: executorRecords[0].id,
-        status: "DONE",
-        source: "WEB",
+        status: EntryStatus.DONE,
+        source: EntrySource.WEB,
         quantity: 5.5,
         unit: "ha",
         note: "Završeno pre kiše",
@@ -181,13 +187,13 @@ async function main() {
       },
       {
         date: today,
-        entryType: "SERVICE",
+        entryType: EntryType.SERVICE,
         clientId: clientRecords[0].id,
         operationId: opPrskanje?.id || operationRecords[2].id,
         cropId: cropRecords.find((c) => c.name === "Kukuruz")?.id,
         executorId: executorRecords[1].id,
-        status: "IN_PROGRESS",
-        source: "VOICE",
+        status: EntryStatus.IN_PROGRESS,
+        source: EntrySource.VOICE,
         quantity: 10,
         unit: "ha",
         note: "Pera prska kod Jovana",
@@ -197,13 +203,13 @@ async function main() {
       },
       {
         date: yesterday,
-        entryType: "WORK",
+        entryType: EntryType.WORK,
         fieldId: fieldRecords[1].id,
         operationId: opSetva?.id || operationRecords[1].id,
         cropId: cropRecords.find((c) => c.name === "Soja")?.id,
         executorId: executorRecords[0].id,
-        status: "DONE",
-        source: "WEB",
+        status: EntryStatus.DONE,
+        source: EntrySource.WEB,
         quantity: 2.3,
         unit: "ha",
         createdByUserId: adminUser.id,
@@ -211,12 +217,12 @@ async function main() {
       },
       {
         date: twoDaysAgo,
-        entryType: "SERVICE",
+        entryType: EntryType.SERVICE,
         clientId: clientRecords[1].id,
         operationId: operationRecords.find((o) => o.name === "Transport")?.id || operationRecords[4].id,
         executorId: executorRecords[2].id,
-        status: "DONE",
-        source: "WEB",
+        status: EntryStatus.DONE,
+        source: EntrySource.WEB,
         quantity: 8,
         unit: "sati",
         createdByUserId: adminUser.id,
