@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "tsx watch server.ts",
     "start": "node dist/server.js",
-    "build": "tsc",
-    "postinstall": "yarn build",
+    "build": "prisma generate && tsc",
+    "postinstall": "prisma generate",
     "prisma": "prisma",
     "seed": "ts-node db/seed.ts"
   },
