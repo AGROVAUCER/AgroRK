@@ -1,0 +1,11 @@
+# Render service definition to ensure dist is built before start
+services:
+  - type: web
+    name: agrork-backend
+    env: node
+    plan: starter
+    buildCommand: yarn install && yarn build
+    startCommand: yarn start
+    envVars:
+      - key: NODE_VERSION
+        value: "22.22.0"
