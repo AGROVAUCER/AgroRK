@@ -7,7 +7,7 @@
     "dev": "tsx watch server.ts",
     "start": "node dist/server.js",
     "build": "prisma generate && tsc",
-    "postinstall": "prisma generate",
+    "postinstall": "prisma generate && yarn build",
     "prisma": "prisma",
     "seed": "ts-node db/seed.ts"
   },
