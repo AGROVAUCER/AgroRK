@@ -9,6 +9,10 @@ const JWT_SECRET: string = (() => {
   return v
 })()
 
+export type AuthOptions = {
+  optional?: boolean
+}
+
 export function authMiddleware(req: any, res: Response, next: NextFunction) {
   const header = req.headers.authorization
   const authHeader = typeof header === 'string' ? header : ''
@@ -25,16 +29,29 @@ export function authMiddleware(req: any, res: Response, next: NextFunction) {
   }
 }
 
-export type UserRole = 'ADMIN' | 'USER'
-
-// routes koriste auth() ili auth('ADMIN')
-export function auth(requiredRole?: UserRole) {
+// routes koriste auth() i auth({ optional: true })
+export function auth(opts?: AuthOptions) {
   return (req: any, res: Response, next: NextFunction) => {
-    return authMiddleware(req, res, () => {
-      if (requiredRole && req.user?.role !== requiredRole) {
-        return res.status(403).json({ message: 'Forbidden' })
+    if (opts?.optional) {
+      const header = req.headers.authorization
+      const authHeader = typeof header === 'string' ? header : ''
+      const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
+
+      if (!token) {
+        req.user = undefined
+        return next()
       }
-      return next()
-    })
+
+      try {
+        const payload = jwt.verify(token, JWT_SECRET) as JwtPayloadAny
+        req.user = { id: payload.sub, role: payload.role, orgId: payload.orgId ?? null }
+        return next()
+      } catch {
+        req.user = undefined
+        return next()
+      }
+    }
+
+    return authMiddleware(req, res, next)
   }
 }

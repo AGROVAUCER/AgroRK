@@ -1,10 +1,11 @@
 import type { Response, NextFunction } from 'express'
-import type { UserRole } from './auth'
 
-export function requireRole(role: UserRole) {
+export function requireRole(role: string | string[]) {
+  const roles = Array.isArray(role) ? role : [role]
+
   return (req: any, res: Response, next: NextFunction) => {
     if (!req.user?.role) return res.status(401).json({ message: 'Unauthorized' })
-    if (req.user.role !== role) return res.status(403).json({ message: 'Forbidden' })
+    if (!roles.includes(req.user.role)) return res.status(403).json({ message: 'Forbidden' })
     return next()
   }
 }
