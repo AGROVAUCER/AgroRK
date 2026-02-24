@@ -25,7 +25,16 @@ export function authMiddleware(req: any, res: Response, next: NextFunction) {
   }
 }
 
-// ROUTES trenutno koriste auth() -> zato mora biti funkcija
-export function auth() {
-  return authMiddleware
+export type UserRole = 'ADMIN' | 'USER'
+
+// routes koriste auth() ili auth('ADMIN')
+export function auth(requiredRole?: UserRole) {
+  return (req: any, res: Response, next: NextFunction) => {
+    return authMiddleware(req, res, () => {
+      if (requiredRole && req.user?.role !== requiredRole) {
+        return res.status(403).json({ message: 'Forbidden' })
+      }
+      return next()
+    })
+  }
 }
