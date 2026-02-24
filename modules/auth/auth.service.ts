@@ -1,9 +1,12 @@
+// modules/auth/auth.service.ts
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import { supabaseAdmin } from '../../lib/supabaseAdmin'
-
-const JWT_SECRET = process.env.JWT_SECRET
-if (!JWT_SECRET) throw new Error('JWT_SECRET missing')
+import { supabaseAdmin } from '../../src/lib/supabaseAdmin'
+const JWT_SECRET: string = (() => {
+  const v = process.env.JWT_SECRET
+  if (!v) throw new Error('JWT_SECRET missing')
+  return v
+})()
 
 export type AuthUser = {
   id: string
@@ -16,23 +19,7 @@ export type AuthUser = {
   orgId: string | null
 }
 
-export async function findUserByEmailOrPhone(
-  email?: string | null,
-  phone?: string | null,
-  userId?: string | null
-): Promise<AuthUser | null> {
-  // Prioritet: userId (za /me), pa email, pa phone
-  if (userId) {
-    const { data, error } = await supabaseAdmin
-      .from('User')
-      .select('id,name,email,phone,passwordHash,role,isActive,orgId')
-      .eq('id', userId)
-      .maybeSingle<AuthUser>()
-
-    if (error) throw new Error(error.message)
-    return data ?? null
-  }
-
+export async function findUserByEmailOrPhone(email?: string | null, phone?: string | null) {
   if (email) {
     const { data, error } = await supabaseAdmin
       .from('User')
@@ -58,7 +45,18 @@ export async function findUserByEmailOrPhone(
   return null
 }
 
-export async function verifyPassword(passwordHash: string, password: string): Promise<boolean> {
+export async function findUserById(id: string) {
+  const { data, error } = await supabaseAdmin
+    .from('User')
+    .select('id,name,email,phone,passwordHash,role,isActive,orgId')
+    .eq('id', id)
+    .maybeSingle<AuthUser>()
+
+  if (error) throw new Error(error.message)
+  return data ?? null
+}
+
+export async function verifyPassword(passwordHash: string, password: string) {
   return bcrypt.compare(password, passwordHash)
 }
 
