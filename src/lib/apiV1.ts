@@ -1,4 +1,3 @@
-// src/lib/apiV1.ts  (BACKEND: bez import.meta)
 export const API_V1_URL: string = (() => {
   const v =
     process.env.API_V1_URL ||

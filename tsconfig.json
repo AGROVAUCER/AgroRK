@@ -1,4 +1,3 @@
-// tsconfig.json
 {
   "compilerOptions": {
     "target": "ES2020",
@@ -11,6 +10,13 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true
   },
-  "include": ["**/*.ts"],
+  "include": [
+    "server.ts",
+    "routes/**/*.ts",
+    "modules/**/*.ts",
+    "middleware/**/*.ts",
+    "src/**/*.ts",
+    "lib/**/*.ts"
+  ],
   "exclude": ["node_modules", "dist", "db/**", "prisma/**"]
 }

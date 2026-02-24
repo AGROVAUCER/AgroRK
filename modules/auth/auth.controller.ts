@@ -1,4 +1,3 @@
-// modules/auth/auth.controller.ts
 import type { Request, Response } from 'express'
 import { asyncHandler } from '../../utils/asyncHandler'
 import { findUserByEmailOrPhone, findUserById, signAccessToken, verifyPassword } from './auth.service'
