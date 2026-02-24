@@ -18,6 +18,11 @@ app.use(morgan("dev"));
 
 // API versions
 app.use("/v1", v1Router);
+// Legacy compatibility for existing frontend (root paths)
+app.use("/", legacyRouter);
+
+// Legacy compatibility for existing frontend (supabase function paths)
+app.use("/make-server-628f7fac", legacyRouter);
 
 // Legacy compatibility for existing frontend (supabase function paths)
 app.use("/make-server-628f7fac", legacyRouter);
