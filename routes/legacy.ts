@@ -1,11 +1,17 @@
+// routes/legacy.ts
 import { Router } from "express";
 import { prisma } from "../db/prisma";
 import { createEntry, ensureEntryRules } from "../modules/entries/entries.service";
+import authRouter from "../modules/auth/auth.routes";
 
 const router = Router();
 
+// legacy auth endpoints (frontend expects /auth/* on root)
+router.use("/auth", authRouter);
+
 // helper to resolve orgId (fallback to default)
-const resolveOrg = (req: any) => req.headers["x-org-id"]?.toString() || req.user?.orgId || "default-org";
+const resolveOrg = (req: any) =>
+  req.headers["x-org-id"]?.toString() || req.user?.orgId || "default-org";
 
 const resolveStatus = (status: string | undefined) => {
   if (!status) return "DONE";
@@ -27,8 +33,11 @@ const resolveSource = (src: string | undefined) => {
 };
 
 const defaultCreator = async (orgId: string) => {
-  const user = await prisma.user.findFirst({ where: { orgId, role: "ADMIN", isActive: true } }) ||
-    await prisma.user.findFirst({ where: { orgId } });
+  const user =
+    (await prisma.user.findFirst({
+      where: { orgId, role: "ADMIN", isActive: true },
+    })) || (await prisma.user.findFirst({ where: { orgId } }));
+
   if (!user) throw { status: 500, message: "No user found to attribute entry" };
   return user.id;
 };
@@ -36,13 +45,18 @@ const defaultCreator = async (orgId: string) => {
 router.get("/api/data", async (req, res, next) => {
   try {
     const orgId = resolveOrg(req);
+
     const [fields, crops, clients, operations, entries] = await Promise.all([
       prisma.field.findMany({ where: { orgId } }),
       prisma.crop.findMany({ where: { orgId } }),
       prisma.client.findMany({ where: { orgId } }),
       prisma.operation.findMany({ where: { orgId } }),
-      prisma.workEntry.findMany({ where: { orgId }, orderBy: { date: "desc" } }),
+      prisma.workEntry.findMany({
+        where: { orgId },
+        orderBy: { date: "desc" },
+      }),
     ]);
+
     res.json({ fields, crops, clients, operations, entries });
   } catch (err) {
     next(err);
@@ -52,7 +66,13 @@ router.get("/api/data", async (req, res, next) => {
 router.post("/api/seed", async (req, res, next) => {
   try {
     const orgId = resolveOrg(req);
-    const { fields = [], crops = [], clients = [], operations = [], entries = [] } = req.body || {};
+    const {
+      fields = [],
+      crops = [],
+      clients = [],
+      operations = [],
+      entries = [],
+    } = req.body || {};
 
     await prisma.$transaction([
       ...crops.map((c: any) =>
@@ -65,7 +85,12 @@ router.post("/api/seed", async (req, res, next) => {
       ...operations.map((op: any) =>
         prisma.operation.upsert({
           where: { name_orgId: { name: op.name, orgId } },
-          update: { applyTo: op.applyTo ?? "BOTH", aliases: op.aliases ?? [], userName: op.userName ?? op.name, canonicalKey: op.canonicalKey ?? op.name.toUpperCase() },
+          update: {
+            applyTo: op.applyTo ?? "BOTH",
+            aliases: op.aliases ?? [],
+            userName: op.userName ?? op.name,
+            canonicalKey: op.canonicalKey ?? op.name.toUpperCase(),
+          },
           create: {
             name: op.name,
             applyTo: op.applyTo ?? "BOTH",
@@ -94,13 +119,20 @@ router.post("/api/seed", async (req, res, next) => {
         prisma.client.upsert({
           where: { name_orgId: { name: c.name, orgId } },
           update: { phone: c.phone, location: c.location, aliases: c.aliases ?? [] },
-          create: { name: c.name, phone: c.phone, location: c.location, aliases: c.aliases ?? [], orgId },
+          create: {
+            name: c.name,
+            phone: c.phone,
+            location: c.location,
+            aliases: c.aliases ?? [],
+            orgId,
+          },
         })
       ),
     ]);
 
     if (entries.length > 0) {
       const creatorId = await defaultCreator(orgId);
+
       await prisma.workEntry.createMany({
         data: entries.map((e: any) => ({
           date: e.date ? new Date(e.date) : new Date(),
@@ -129,11 +161,13 @@ router.post("/api/seed", async (req, res, next) => {
   }
 });
 
-router.post("/api/entry", async (req, res, next) => {
+router.post("/api/entry", async (req: any, res, next) => {
   try {
     const orgId = resolveOrg(req);
     const body = req.body || {};
+
     const creatorId = req.user?.id ?? (await defaultCreator(orgId));
+
     const payload = {
       ...body,
       entryType: resolveEntryType(body.type || body.entryType),
@@ -142,8 +176,10 @@ router.post("/api/entry", async (req, res, next) => {
       note: body.notes ?? body.note,
       voiceOriginalText: body.voiceText ?? body.voiceOriginalText,
     };
+
     await ensureEntryRules(orgId, payload);
     const entry = await createEntry(orgId, creatorId, payload);
+
     res.status(201).json(entry);
   } catch (err) {
     next(err);
