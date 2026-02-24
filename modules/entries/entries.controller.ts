@@ -44,7 +44,7 @@ export const getEntryById = asyncHandler(async (req: Request, res: Response) => 
 export const postEntry = asyncHandler(async (req: Request, res: Response) => {
   const body = req.body;
   await ensureEntryRules(req.orgId!, body);
-  const entry = await createEntry(req.orgId!, req.user!.id, {
+  const entry = await createEntry(req.orgId!, req.user?.id || "", {
     ...body,
     source: body.source || "WEB",
   });
