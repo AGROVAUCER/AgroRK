@@ -1,140 +1,198 @@
-import { prisma } from "../../db/prisma";
-import { EntryType, EntryStatus, EntrySource } from "@prisma/client";
+import { supabaseAdmin } from '../../src/lib/supabaseAdmin'
+
+export type EntryType = 'WORK' | 'SERVICE'
+export type EntryStatus = 'IN_PROGRESS' | 'DONE'
+export type EntrySource = 'VOICE' | 'WEB'
 
 type ListFilters = {
-  orgId: string;
-  dateFrom?: Date;
-  dateTo?: Date;
-  entryType?: EntryType;
-  fieldId?: string;
-  clientId?: string;
-  operationId?: string;
-  status?: EntryStatus;
-  executorId?: string;
-  search?: string;
-  limit?: number;
-  cursor?: string;
-};
+  orgId: string
+  dateFrom?: Date
+  dateTo?: Date
+  entryType?: EntryType
+  fieldId?: string
+  clientId?: string
+  operationId?: string
+  status?: EntryStatus
+  executorId?: string
+  search?: string
+  limit?: number
+  cursor?: string
+}
 
-export const listEntries = (filters: ListFilters) => {
-  const take = Math.min(Math.max(filters.limit ?? 20, 1), 100);
-  const where: any = { orgId: filters.orgId };
-  if (filters.dateFrom || filters.dateTo) {
-    where.date = {};
-    if (filters.dateFrom) where.date.gte = filters.dateFrom;
-    if (filters.dateTo) where.date.lte = filters.dateTo;
-  }
-  if (filters.entryType) where.entryType = filters.entryType;
-  if (filters.fieldId) where.fieldId = filters.fieldId;
-  if (filters.clientId) where.clientId = filters.clientId;
-  if (filters.operationId) where.operationId = filters.operationId;
-  if (filters.status) where.status = filters.status;
-  if (filters.executorId) where.executorId = filters.executorId;
+type WorkEntryRow = any
+
+const clamp = (n: number, min: number, max: number) => Math.min(Math.max(n, min), max)
+
+export const listEntries = async (filters: ListFilters) => {
+  const take = clamp(filters.limit ?? 20, 1, 100)
+
+  let q = supabaseAdmin
+    .from('WorkEntry')
+    .select(
+      `
+      *,
+      field:Field(*),
+      client:Client(*),
+      operation:Operation(*),
+      crop:Crop(*),
+      executor:Executor(*),
+      createdBy:User(*)
+    `
+    )
+    .eq('orgId', filters.orgId)
+    .order('date', { ascending: false })
+    .limit(take)
+
+  if (filters.dateFrom) q = q.gte('date', filters.dateFrom.toISOString())
+  if (filters.dateTo) q = q.lte('date', filters.dateTo.toISOString())
+
+  if (filters.entryType) q = q.eq('entryType', filters.entryType)
+  if (filters.fieldId) q = q.eq('fieldId', filters.fieldId)
+  if (filters.clientId) q = q.eq('clientId', filters.clientId)
+  if (filters.operationId) q = q.eq('operationId', filters.operationId)
+  if (filters.status) q = q.eq('status', filters.status)
+  if (filters.executorId) q = q.eq('executorId', filters.executorId)
+
   if (filters.search) {
-    where.OR = [
-      { note: { contains: filters.search, mode: "insensitive" } },
-      { voiceOriginalText: { contains: filters.search, mode: "insensitive" } },
-    ];
+    const s = String(filters.search).replace(/,/g, '\\,')
+    q = q.or(`note.ilike.%${s}%,voiceOriginalText.ilike.%${s}%`)
   }
 
-  return prisma.workEntry.findMany({
-    where,
-    orderBy: { date: "desc" },
-    take,
-    skip: filters.cursor ? 1 : 0,
-    cursor: filters.cursor ? { id: filters.cursor } : undefined,
-    include: {
-      field: true,
-      client: true,
-      operation: true,
-      crop: true,
-      executor: true,
-      createdBy: true,
-    },
-  });
-};
+  // cursor pagination (approx): fetch next page by date < cursor.date (stable sort)
+  // requires cursor to be an id; we first read cursor row to get its date.
+  if (filters.cursor) {
+    const { data: cursorRow, error: cursorErr } = await supabaseAdmin
+      .from('WorkEntry')
+      .select('id,date')
+      .eq('orgId', filters.orgId)
+      .eq('id', filters.cursor)
+      .maybeSingle<{ id: string; date: string }>()
 
-export const getEntry = (orgId: string, id: string) => {
-  return prisma.workEntry.findFirst({
-    where: { id, orgId },
-    include: {
-      field: true,
-      client: true,
-      operation: true,
-      crop: true,
-      executor: true,
-      createdBy: true,
-    },
-  });
-};
+    if (cursorErr) throw new Error(cursorErr.message)
+    if (cursorRow?.date) {
+      q = q.lt('date', cursorRow.date)
+    }
+  }
+
+  const { data, error } = await q
+  if (error) throw new Error(error.message)
+  return (data ?? []) as WorkEntryRow[]
+}
+
+export const getEntry = async (orgId: string, id: string) => {
+  const { data, error } = await supabaseAdmin
+    .from('WorkEntry')
+    .select(
+      `
+      *,
+      field:Field(*),
+      client:Client(*),
+      operation:Operation(*),
+      crop:Crop(*),
+      executor:Executor(*),
+      createdBy:User(*)
+    `
+    )
+    .eq('orgId', orgId)
+    .eq('id', id)
+    .maybeSingle<WorkEntryRow>()
+
+  if (error) throw new Error(error.message)
+  return data ?? null
+}
 
 export const ensureEntryRules = async (orgId: string, data: any) => {
-  const entryType = data.entryType;
-  if (entryType === "WORK") {
-    if (!data.fieldId) throw { status: 400, message: "fieldId is required for WORK" };
-    data.clientId = null;
+  const entryType = data.entryType as EntryType
+
+  if (entryType === 'WORK') {
+    if (!data.fieldId) throw { status: 400, message: 'fieldId is required for WORK' }
+    data.clientId = null
   }
-  if (entryType === "SERVICE") {
-    if (!data.clientId) throw { status: 400, message: "clientId is required for SERVICE" };
-    data.fieldId = null;
+  if (entryType === 'SERVICE') {
+    if (!data.clientId) throw { status: 400, message: 'clientId is required for SERVICE' }
+    data.fieldId = null
   }
-  if (!data.operationId) throw { status: 400, message: "operationId is required" };
-  if (!data.date) throw { status: 400, message: "date is required" };
-  if (!data.status) throw { status: 400, message: "status is required" };
 
-  // Sowing rule
-  const op = await prisma.operation.findFirst({ where: { id: data.operationId, orgId } });
-  if (!op) throw { status: 400, message: "Invalid operationId" };
-  if (op.canonicalKey?.toUpperCase() === "SOWING" && !data.cropId) {
-    throw { status: 400, message: "cropId is required for SOWING operation" };
+  if (!data.operationId) throw { status: 400, message: 'operationId is required' }
+  if (!data.date) throw { status: 400, message: 'date is required' }
+  if (!data.status) throw { status: 400, message: 'status is required' }
+
+  const { data: op, error } = await supabaseAdmin
+    .from('Operation')
+    .select('id,orgId,canonicalKey')
+    .eq('orgId', orgId)
+    .eq('id', data.operationId)
+    .maybeSingle<{ id: string; orgId: string; canonicalKey: string | null }>()
+
+  if (error) throw new Error(error.message)
+  if (!op) throw { status: 400, message: 'Invalid operationId' }
+
+  if (String(op.canonicalKey ?? '').toUpperCase() === 'SOWING' && !data.cropId) {
+    throw { status: 400, message: 'cropId is required for SOWING operation' }
   }
-};
+}
 
-export const createEntry = (orgId: string, createdByUserId: string, data: any) => {
-  return prisma.workEntry.create({
-    data: {
-      date: data.date ? new Date(data.date) : new Date(),
-      entryType: data.entryType,
-      fieldId: data.fieldId ?? null,
-      clientId: data.clientId ?? null,
-      operationId: data.operationId,
-      cropId: data.cropId ?? null,
-      executorId: data.executorId ?? null,
-      quantity: data.quantity ?? null,
-      unit: data.unit ?? null,
-      status: data.status,
-      note: data.note ?? null,
-      source: data.source ?? EntrySource.WEB,
-      voiceOriginalText: data.voiceOriginalText ?? null,
-      createdByUserId,
-      orgId,
-    },
-  });
-};
+export const createEntry = async (orgId: string, createdByUserId: string, data: any) => {
+  const payload = {
+    date: data.date ? new Date(data.date).toISOString() : new Date().toISOString(),
+    entryType: data.entryType as EntryType,
+    fieldId: data.fieldId ?? null,
+    clientId: data.clientId ?? null,
+    operationId: data.operationId,
+    cropId: data.cropId ?? null,
+    executorId: data.executorId ?? null,
+    quantity: data.quantity ?? null,
+    unit: data.unit ?? null,
+    status: data.status as EntryStatus,
+    note: data.note ?? null,
+    source: (data.source ?? 'WEB') as EntrySource,
+    voiceOriginalText: data.voiceOriginalText ?? null,
+    createdByUserId,
+    orgId,
+  }
 
-export const updateEntry = (orgId: string, id: string, data: any) => {
-  return prisma.workEntry.update({
-    where: { id, orgId },
-    data: {
-      date: data.date ? new Date(data.date) : undefined,
-      entryType: data.entryType,
-      fieldId: data.fieldId ?? undefined,
-      clientId: data.clientId ?? undefined,
-      operationId: data.operationId,
-      cropId: data.cropId ?? undefined,
-      executorId: data.executorId ?? undefined,
-      quantity: data.quantity,
-      unit: data.unit,
-      status: data.status,
-      note: data.note,
-      source: data.source,
-      voiceOriginalText: data.voiceOriginalText,
-    },
-  });
-};
+  const { data: row, error } = await supabaseAdmin
+    .from('WorkEntry')
+    .insert(payload)
+    .select('*')
+    .single<WorkEntryRow>()
 
-export const deleteEntry = (orgId: string, id: string) => {
-  return prisma.workEntry.delete({
-    where: { id, orgId },
-  });
-};
+  if (error) throw new Error(error.message)
+  return row
+}
+
+export const updateEntry = async (orgId: string, id: string, data: any) => {
+  const patch: any = {
+    entryType: data.entryType,
+    operationId: data.operationId,
+    quantity: data.quantity,
+    unit: data.unit,
+    status: data.status,
+    note: data.note,
+    source: data.source,
+    voiceOriginalText: data.voiceOriginalText,
+  }
+
+  if (data.date !== undefined) patch.date = data.date ? new Date(data.date).toISOString() : null
+  if (data.fieldId !== undefined) patch.fieldId = data.fieldId ?? null
+  if (data.clientId !== undefined) patch.clientId = data.clientId ?? null
+  if (data.cropId !== undefined) patch.cropId = data.cropId ?? null
+  if (data.executorId !== undefined) patch.executorId = data.executorId ?? null
+
+  const { data: row, error } = await supabaseAdmin
+    .from('WorkEntry')
+    .update(patch)
+    .eq('orgId', orgId)
+    .eq('id', id)
+    .select('*')
+    .single<WorkEntryRow>()
+
+  if (error) throw new Error(error.message)
+  return row
+}
+
+export const deleteEntry = async (orgId: string, id: string) => {
+  const { error } = await supabaseAdmin.from('WorkEntry').delete().eq('orgId', orgId).eq('id', id)
+  if (error) throw new Error(error.message)
+  return { success: true }
+}
