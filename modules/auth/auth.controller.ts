@@ -1,6 +1,7 @@
+// modules/auth/auth.controller.ts
 import type { Request, Response } from 'express'
 import { asyncHandler } from '../../utils/asyncHandler'
-import { findUserByEmailOrPhone, signAccessToken, verifyPassword } from './auth.service'
+import { findUserByEmailOrPhone, findUserById, signAccessToken, verifyPassword } from './auth.service'
 
 export const login = asyncHandler(async (req: Request, res: Response) => {
   const { email, phone, password } = req.body ?? {}
@@ -10,7 +11,6 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const user = await findUserByEmailOrPhone(email, phone)
-
   if (!user || !user.isActive) {
     return res.status(401).json({ message: 'Invalid credentials' })
   }
@@ -28,13 +28,10 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   })
 })
 
-export const me = asyncHandler(async (req: Request, res: Response) => {
+export const me = asyncHandler(async (req: any, res: Response) => {
   if (!req.user?.id) return res.status(401).json({ message: 'Unauthorized' })
 
-  const user = await findUserByEmailOrPhone(req.user.email ?? null, req.user.phone ?? null, req.user.id)
-
-  // Ako je middleware već setovao req.user samo sa id, a nema email/phone,
-  // mi gore prosledimo userId (3. parametar) da se user nađe po id.
+  const user = await findUserById(req.user.id)
   if (!user || !user.isActive) return res.status(401).json({ message: 'Unauthorized' })
 
   return res.json({ id: user.id, name: user.name, role: user.role, orgId: user.orgId })

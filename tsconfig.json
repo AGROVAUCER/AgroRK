@@ -1,3 +1,4 @@
+// tsconfig.json
 {
   "compilerOptions": {
     "target": "ES2020",
@@ -11,5 +12,5 @@
     "resolveJsonModule": true
   },
   "include": ["**/*.ts"],
-  "exclude": ["node_modules", "dist", "db/prisma.ts", "db/seed.ts", "prisma/**"]
+  "exclude": ["node_modules", "dist", "db/**", "prisma/**"]
 }
