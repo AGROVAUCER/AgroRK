@@ -25,5 +25,7 @@ export function authMiddleware(req: any, res: Response, next: NextFunction) {
   }
 }
 
-// routes uvoze { auth }
-export const auth = authMiddleware
+// ROUTES trenutno koriste auth() -> zato mora biti funkcija
+export function auth() {
+  return authMiddleware
+}

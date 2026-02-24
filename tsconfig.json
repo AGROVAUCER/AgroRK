@@ -16,7 +16,8 @@
     "modules/**/*.ts",
     "middleware/**/*.ts",
     "src/**/*.ts",
-    "lib/**/*.ts"
+    "lib/**/*.ts",
+    "types/**/*.d.ts"
   ],
   "exclude": ["node_modules", "dist", "db/**", "prisma/**"]
 }
