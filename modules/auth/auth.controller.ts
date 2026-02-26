@@ -95,16 +95,20 @@ export const signup = asyncHandler(async (req: Request, res: Response) => {
 
   const passwordHash = await bcrypt.hash(String(password), 10);
 
-  const newUser = {
-    id: randomUUID(),
-    name: String(name).trim(),
-    email: normalizedEmail,
-    phone: normalizedPhone,
-    passwordHash,
-    role: "USER",
-    isActive: true,
-    orgId: null,
-  };
+  const now = new Date().toISOString();
+
+const newUser = {
+  id: randomUUID(),
+  name: String(name).trim(),
+  email: normalizedEmail,
+  phone: normalizedPhone,
+  passwordHash,
+  role: "USER",
+  isActive: true,
+  orgId: null,
+  createdAt: now,
+  updatedAt: now,
+};
 
   const { error } = await supabaseAdmin.from("User").insert(newUser);
 
