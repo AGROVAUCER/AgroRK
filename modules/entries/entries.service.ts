@@ -1,3 +1,4 @@
+// modules/entries/entries.service.ts
 import { supabaseAdmin } from '../../src/lib/supabaseAdmin'
 
 export type EntryType = 'WORK' | 'SERVICE'
@@ -162,16 +163,17 @@ export const createEntry = async (orgId: string, createdByUserId: string, data: 
 }
 
 export const updateEntry = async (orgId: string, id: string, data: any) => {
-  const patch: any = {
-    entryType: data.entryType,
-    operationId: data.operationId,
-    quantity: data.quantity,
-    unit: data.unit,
-    status: data.status,
-    note: data.note,
-    source: data.source,
-    voiceOriginalText: data.voiceOriginalText,
-  }
+  // IMPORTANT: only include fields that were actually provided (avoid sending undefined)
+  const patch: any = {}
+
+  if (data.entryType !== undefined) patch.entryType = data.entryType
+  if (data.operationId !== undefined) patch.operationId = data.operationId
+  if (data.quantity !== undefined) patch.quantity = data.quantity
+  if (data.unit !== undefined) patch.unit = data.unit
+  if (data.status !== undefined) patch.status = data.status
+  if (data.note !== undefined) patch.note = data.note ?? null
+  if (data.source !== undefined) patch.source = data.source
+  if (data.voiceOriginalText !== undefined) patch.voiceOriginalText = data.voiceOriginalText ?? null
 
   if (data.date !== undefined) patch.date = data.date ? new Date(data.date).toISOString() : null
   if (data.fieldId !== undefined) patch.fieldId = data.fieldId ?? null
