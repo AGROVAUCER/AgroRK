@@ -1,12 +1,7 @@
 // modules/auth/auth.service.ts
-import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
+import bcrypt from 'bcryptjs'
 import { supabaseAdmin } from '../../src/lib/supabaseAdmin'
-const JWT_SECRET: string = (() => {
-  const v = process.env.JWT_SECRET
-  if (!v) throw new Error('JWT_SECRET missing')
-  return v
-})()
 
 export type AuthUser = {
   id: string
@@ -18,6 +13,12 @@ export type AuthUser = {
   isActive: boolean
   orgId: string | null
 }
+
+const JWT_SECRET: string = (() => {
+  const v = process.env.JWT_SECRET
+  if (!v) throw new Error('JWT_SECRET missing')
+  return v
+})()
 
 export async function findUserByEmailOrPhone(email?: string | null, phone?: string | null) {
   if (email) {

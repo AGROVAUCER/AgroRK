@@ -1,3 +1,4 @@
+// modules/entries/entries.routes.ts
 import { Router } from "express";
 import { auth } from "../../middleware/auth";
 import { orgScope } from "../../middleware/orgScope";

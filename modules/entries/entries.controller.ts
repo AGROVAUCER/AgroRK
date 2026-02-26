@@ -1,6 +1,14 @@
+// modules/entries/entries.controller.ts
 import { Request, Response } from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
-import { createEntry, deleteEntry, ensureEntryRules, getEntry, listEntries, updateEntry } from "./entries.service";
+import {
+  createEntry,
+  deleteEntry,
+  ensureEntryRules,
+  getEntry,
+  listEntries,
+  updateEntry,
+} from "./entries.service";
 
 export const getEntries = asyncHandler(async (req: Request, res: Response) => {
   const {
@@ -21,11 +29,11 @@ export const getEntries = asyncHandler(async (req: Request, res: Response) => {
     orgId: req.orgId!,
     dateFrom: dateFrom ? new Date(String(dateFrom)) : undefined,
     dateTo: dateTo ? new Date(String(dateTo)) : undefined,
-    entryType: type ? String(type).toUpperCase() as any : undefined,
+    entryType: type ? (String(type).toUpperCase() as any) : undefined,
     fieldId: fieldId as string | undefined,
     clientId: clientId as string | undefined,
     operationId: operationId as string | undefined,
-    status: status ? String(status).toUpperCase() as any : undefined,
+    status: status ? (String(status).toUpperCase() as any) : undefined,
     executorId: executorId as string | undefined,
     search: search as string | undefined,
     cursor: cursor as string | undefined,
@@ -54,7 +62,7 @@ export const postEntry = asyncHandler(async (req: Request, res: Response) => {
 export const patchEntry = asyncHandler(async (req: Request, res: Response) => {
   const existing = await getEntry(req.orgId!, req.params.id);
   if (!existing) return res.status(404).json({ message: "Not found" });
-  // permissions
+
   if (req.user?.role !== "ADMIN" && existing.createdByUserId !== req.user?.id) {
     return res.status(403).json({ message: "Forbidden" });
   }
@@ -68,9 +76,11 @@ export const patchEntry = asyncHandler(async (req: Request, res: Response) => {
 export const removeEntry = asyncHandler(async (req: Request, res: Response) => {
   const existing = await getEntry(req.orgId!, req.params.id);
   if (!existing) return res.status(404).json({ message: "Not found" });
+
   if (req.user?.role !== "ADMIN" && existing.createdByUserId !== req.user?.id) {
     return res.status(403).json({ message: "Forbidden" });
   }
+
   await deleteEntry(req.orgId!, req.params.id);
   res.status(204).send();
 });
