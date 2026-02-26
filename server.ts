@@ -17,7 +17,7 @@ app.use(corsMiddleware);
 app.use(morgan("dev"));
 
 // API versions
-app.use("/v1", v1Router);
+app.use("/api/v1", v1Router);
 // Legacy compatibility for existing frontend (root paths)
 app.use("/", legacyRouter);
 
