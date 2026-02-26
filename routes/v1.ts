@@ -11,6 +11,7 @@ import fieldsRouter from "../modules/fields/fields.routes";
 import operationsRouter from "../modules/operations/operations.routes";
 import usersRouter from "../modules/users/users.routes";
 import entriesRouter from "../modules/entries/entries.routes";
+import adminUsersRouter from "../modules/admin/admin.users.routes";
 
 import { auth } from "../middleware/auth";
 import { orgScope } from "../middleware/orgScope";
@@ -32,5 +33,5 @@ router.use("/executors", executorsRouter);
 router.use("/fields", fieldsRouter);
 router.use("/operations", operationsRouter);
 router.use("/entries", entriesRouter);
-
+router.use("/admin", adminUsersRouter);
 export default router;
