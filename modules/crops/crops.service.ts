@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto'
 import { supabaseAdmin } from '../../src/lib/supabaseAdmin'
 
 type CropRow = any
@@ -14,10 +15,15 @@ export const listCrops = async (orgId: string): Promise<CropRow[]> => {
 }
 
 export const createCrop = async (orgId: string, payload: any): Promise<CropRow> => {
+  const now = new Date().toISOString()
+
   const row = {
+    id: randomUUID(),
     ...payload,
     aliases: payload?.aliases ?? [],
     orgId,
+    createdAt: now,
+    updatedAt: now,
   }
 
   const { data, error } = await supabaseAdmin
@@ -31,9 +37,14 @@ export const createCrop = async (orgId: string, payload: any): Promise<CropRow> 
 }
 
 export const updateCrop = async (orgId: string, id: string, patch: any): Promise<CropRow> => {
+  const now = new Date().toISOString()
+
   const { data, error } = await supabaseAdmin
     .from('Crop')
-    .update(patch)
+    .update({
+      ...patch,
+      updatedAt: now,
+    })
     .eq('orgId', orgId)
     .eq('id', id)
     .select('*')
