@@ -12,6 +12,7 @@ import operationsRouter from "../modules/operations/operations.routes";
 import usersRouter from "../modules/users/users.routes";
 import entriesRouter from "../modules/entries/entries.routes";
 import adminUsersRouter from "../modules/admin/admin.users.routes";
+import yieldsRouter from '../modules/yields/yields.routes'
 
 import { auth } from "../middleware/auth";
 import { orgScope } from "../middleware/orgScope";
@@ -34,4 +35,5 @@ router.use("/fields", fieldsRouter);
 router.use("/operations", operationsRouter);
 router.use("/entries", entriesRouter);
 router.use("/admin", adminUsersRouter);
+router.use("/yields", yieldsRouter);
 export default router;

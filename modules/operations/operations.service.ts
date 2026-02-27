@@ -1,24 +1,63 @@
-import { prisma } from "../../db/prisma";
+import { supabaseAdmin } from '../../src/lib/supabaseAdmin'
 
-export const listOperations = (orgId: string) => {
-  return prisma.operation.findMany({ where: { orgId }, orderBy: { name: "asc" } });
-};
+type OperationRow = any
 
-export const createOperation = (orgId: string, data: any) => {
-  return prisma.operation.create({
-    data: { ...data, aliases: data.aliases ?? [], orgId },
-  });
-};
+export const listOperations = async (orgId: string): Promise<OperationRow[]> => {
+  const { data, error } = await supabaseAdmin
+    .from('Operation')
+    .select('*')
+    .eq('orgId', orgId)
+    .order('name', { ascending: true })
 
-export const updateOperation = (orgId: string, id: string, data: any) => {
-  const updateData: any = {};
-  if (data.userName !== undefined) updateData.userName = data.userName;
-  if (data.applyTo !== undefined) updateData.applyTo = data.applyTo;
-  if (data.aliases !== undefined) updateData.aliases = data.aliases ?? [];
-  // name and canonicalKey are locked
-  return prisma.operation.update({ where: { id, orgId }, data: updateData });
-};
+  if (error) throw new Error(error.message)
+  return data ?? []
+}
 
-export const deleteOperation = (orgId: string, id: string) => {
-  return prisma.operation.delete({ where: { id, orgId } });
-};
+export const createOperation = async (orgId: string, payload: any): Promise<OperationRow> => {
+  const row = {
+    ...payload,
+    aliases: payload?.aliases ?? [],
+    orgId,
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('Operation')
+    .insert(row)
+    .select('*')
+    .single()
+
+  if (error) throw new Error(error.message)
+  return data
+}
+
+export const updateOperation = async (
+  orgId: string,
+  id: string,
+  patch: any
+): Promise<OperationRow> => {
+  const updateData: any = {}
+  if (patch?.userName !== undefined) updateData.userName = patch.userName
+  if (patch?.applyTo !== undefined) updateData.applyTo = patch.applyTo
+  if (patch?.aliases !== undefined) updateData.aliases = patch.aliases ?? []
+
+  const { data, error } = await supabaseAdmin
+    .from('Operation')
+    .update(updateData)
+    .eq('orgId', orgId)
+    .eq('id', id)
+    .select('*')
+    .single()
+
+  if (error) throw new Error(error.message)
+  return data
+}
+
+export const deleteOperation = async (orgId: string, id: string): Promise<void> => {
+  const { error } = await supabaseAdmin
+    .from('Operation')
+    .delete()
+    .eq('orgId', orgId)
+    .eq('id', id)
+
+  if (error) throw new Error(error.message)
+}

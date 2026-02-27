@@ -1,38 +1,67 @@
-import bcrypt from "bcryptjs";
-import { prisma } from "../../db/prisma";
+import bcrypt from 'bcryptjs'
+import { supabaseAdmin } from '../../src/lib/supabaseAdmin'
 
-export const listUsers = (orgId: string) => {
-  return prisma.user.findMany({ where: { orgId }, orderBy: { createdAt: "desc" } });
-};
+type UserRow = any
 
-export const createUser = async (orgId: string, data: any) => {
-  const passwordHash = await bcrypt.hash(data.password, 10);
-  return prisma.user.create({
-    data: {
-      name: data.name,
-      email: data.email,
-      phone: data.phone,
-      passwordHash,
-      role: data.role,
-      isActive: data.isActive ?? true,
-      orgId,
-    },
-  });
-};
+export const listUsers = async (orgId: string): Promise<UserRow[]> => {
+  const { data, error } = await supabaseAdmin
+    .from('User')
+    .select('*')
+    .eq('orgId', orgId)
+    .order('createdAt', { ascending: false })
 
-export const updateUser = async (orgId: string, id: string, data: any) => {
-  const updateData: any = {
-    name: data.name,
-    email: data.email,
-    phone: data.phone,
-    role: data.role,
-    isActive: data.isActive,
-  };
-  if (data.password) {
-    updateData.passwordHash = await bcrypt.hash(data.password, 10);
+  if (error) throw new Error(error.message)
+  return data ?? []
+}
+
+export const createUser = async (orgId: string, payload: any): Promise<UserRow> => {
+  const passwordHash = await bcrypt.hash(payload.password, 10)
+
+  const row = {
+    name: payload.name,
+    email: payload.email,
+    phone: payload.phone,
+    passwordHash,
+    role: payload.role,
+    isActive: payload.isActive ?? true,
+    orgId,
   }
-  return prisma.user.update({
-    where: { id, orgId },
-    data: updateData,
-  });
-};
+
+  const { data, error } = await supabaseAdmin
+    .from('User')
+    .insert(row)
+    .select('*')
+    .single()
+
+  if (error) throw new Error(error.message)
+  return data
+}
+
+export const updateUser = async (
+  orgId: string,
+  id: string,
+  patch: any
+): Promise<UserRow> => {
+  const updateData: any = {
+    name: patch.name,
+    email: patch.email,
+    phone: patch.phone,
+    role: patch.role,
+    isActive: patch.isActive,
+  }
+
+  if (patch.password) {
+    updateData.passwordHash = await bcrypt.hash(patch.password, 10)
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('User')
+    .update(updateData)
+    .eq('orgId', orgId)
+    .eq('id', id)
+    .select('*')
+    .single()
+
+  if (error) throw new Error(error.message)
+  return data
+}

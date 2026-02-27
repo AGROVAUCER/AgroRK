@@ -1,23 +1,58 @@
-import { prisma } from "../../db/prisma";
+import { supabaseAdmin } from '../../src/lib/supabaseAdmin'
 
-export const listClients = (orgId: string) => {
-  return prisma.client.findMany({ where: { orgId }, orderBy: { createdAt: "desc" } });
-};
+type ClientRow = any
 
-export const createClient = (orgId: string, data: any) => {
-  return prisma.client.create({
-    data: {
-      ...data,
-      aliases: data.aliases ?? [],
-      orgId,
-    },
-  });
-};
+export const listClients = async (orgId: string): Promise<ClientRow[]> => {
+  const { data, error } = await supabaseAdmin
+    .from('Client')
+    .select('*')
+    .eq('orgId', orgId)
+    .order('createdAt', { ascending: false })
 
-export const updateClient = (orgId: string, id: string, data: any) => {
-  return prisma.client.update({ where: { id, orgId }, data });
-};
+  if (error) throw new Error(error.message)
+  return data ?? []
+}
 
-export const deleteClient = (orgId: string, id: string) => {
-  return prisma.client.delete({ where: { id, orgId } });
-};
+export const createClient = async (orgId: string, payload: any): Promise<ClientRow> => {
+  const row = {
+    ...payload,
+    aliases: payload?.aliases ?? [],
+    orgId,
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('Client')
+    .insert(row)
+    .select('*')
+    .single()
+
+  if (error) throw new Error(error.message)
+  return data
+}
+
+export const updateClient = async (
+  orgId: string,
+  id: string,
+  patch: any
+): Promise<ClientRow> => {
+  const { data, error } = await supabaseAdmin
+    .from('Client')
+    .update(patch)
+    .eq('orgId', orgId)
+    .eq('id', id)
+    .select('*')
+    .single()
+
+  if (error) throw new Error(error.message)
+  return data
+}
+
+export const deleteClient = async (orgId: string, id: string): Promise<void> => {
+  const { error } = await supabaseAdmin
+    .from('Client')
+    .delete()
+    .eq('orgId', orgId)
+    .eq('id', id)
+
+  if (error) throw new Error(error.message)
+}
