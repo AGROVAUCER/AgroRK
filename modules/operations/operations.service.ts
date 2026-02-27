@@ -14,19 +14,12 @@ export const listOperations = async (orgId: string): Promise<OperationRow[]> => 
   return data ?? []
 }
 
-export const createOperation = async (
-  orgId: string,
-  payload: any
-): Promise<OperationRow> => {
-  const now = new Date().toISOString()
-
+export const createOperation = async (orgId: string, payload: any): Promise<OperationRow> => {
   const row = {
     id: randomUUID(),
     ...payload,
     aliases: payload?.aliases ?? [],
     orgId,
-    createdAt: now,
-    updatedAt: now,
   }
 
   const { data, error } = await supabaseAdmin
@@ -44,11 +37,10 @@ export const updateOperation = async (
   id: string,
   patch: any
 ): Promise<OperationRow> => {
-  const now = new Date().toISOString()
-
-  const updateData: any = { updatedAt: now }
+  const updateData: any = {}
 
   if (patch?.name !== undefined) updateData.name = patch.name
+  if (patch?.type !== undefined) updateData.type = patch.type
   if (patch?.userName !== undefined) updateData.userName = patch.userName
   if (patch?.applyTo !== undefined) updateData.applyTo = patch.applyTo
   if (patch?.aliases !== undefined) updateData.aliases = patch.aliases ?? []
