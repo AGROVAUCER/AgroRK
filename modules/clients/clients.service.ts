@@ -14,13 +14,20 @@ export const listClients = async (orgId: string): Promise<ClientRow[]> => {
   return data ?? []
 }
 
-export const createClient = async (orgId: string, payload: any): Promise<ClientRow> => {
+export const createClient = async (
+  orgId: string,
+  payload: any
+): Promise<ClientRow> => {
+  const now = new Date().toISOString()
+
   const row = {
-  id: randomUUID(),
-  ...payload,
-  aliases: payload?.aliases ?? [],
-  orgId,
-}
+    id: randomUUID(),
+    ...payload,
+    aliases: payload?.aliases ?? [],
+    orgId,
+    createdAt: now,
+    updatedAt: now,
+  }
 
   const { data, error } = await supabaseAdmin
     .from('Client')
@@ -37,9 +44,14 @@ export const updateClient = async (
   id: string,
   patch: any
 ): Promise<ClientRow> => {
+  const now = new Date().toISOString()
+
   const { data, error } = await supabaseAdmin
     .from('Client')
-    .update(patch)
+    .update({
+      ...patch,
+      updatedAt: now,
+    })
     .eq('orgId', orgId)
     .eq('id', id)
     .select('*')
