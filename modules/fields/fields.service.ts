@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto' 
 import { supabaseAdmin } from '../../src/lib/supabaseAdmin'
 
 type FieldRow = any
@@ -15,10 +16,11 @@ export const listFields = async (orgId: string): Promise<FieldRow[]> => {
 
 export const createField = async (orgId: string, payload: any): Promise<FieldRow> => {
   const row = {
-    ...payload,
-    aliases: payload?.aliases ?? [],
-    orgId,
-  }
+  id: randomUUID(),
+  ...payload,
+  aliases: payload?.aliases ?? [],
+  orgId,
+}
 
   const { data, error } = await supabaseAdmin
     .from('Field')

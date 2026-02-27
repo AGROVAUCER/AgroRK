@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto'
 import { supabaseAdmin } from '../../src/lib/supabaseAdmin'
 
 type ClientRow = any
@@ -15,10 +16,11 @@ export const listClients = async (orgId: string): Promise<ClientRow[]> => {
 
 export const createClient = async (orgId: string, payload: any): Promise<ClientRow> => {
   const row = {
-    ...payload,
-    aliases: payload?.aliases ?? [],
-    orgId,
-  }
+  id: randomUUID(),
+  ...payload,
+  aliases: payload?.aliases ?? [],
+  orgId,
+}
 
   const { data, error } = await supabaseAdmin
     .from('Client')
