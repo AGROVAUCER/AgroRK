@@ -1,269 +1,110 @@
-import "dotenv/config";
-import { prisma } from "./prisma";
-import { EntrySource, EntryStatus, EntryType, OperationApplyTo } from "@prisma/client";
+const BASE_URL = process.env.API_URL ?? 'https://agrork.onrender.com/api/v1'
+const ACCESS_TOKEN = process.env.ACCESS_TOKEN ?? ''
 
-const defaultOrgId = "default-org";
+type OpApplyTo = 'WORK' | 'SERVICE' | 'BOTH'
 
-async function main() {
-  const org = await prisma.organization.upsert({
-    where: { id: defaultOrgId },
-    update: {},
-    create: {
-      id: defaultOrgId,
-      name: "Default Farm",
-      plan: "Basic",
-      status: "Active",
+const CROPS = [
+  'Pšenica','Kukuruz','Ječam','Ovas','Raž','Tritikale','Sirak',
+  'Suncokret','Soja','Uljana repica','Šećerna repa','Duvan',
+  'Lucerka','Detelina (crvena)','Detelina (bela)',
+  'Krompir','Crni luk','Beli luk','Šargarepa','Cvekla','Kupus',
+  'Karfiol','Brokoli','Paprika','Paradajz','Krastavac','Tikvica',
+  'Boranija','Grašak','Pasulj','Spanać','Zelena salata','Patlidžan',
+  'Lubenica','Dinja',
+  'Šljiva','Jabuka','Kruška','Trešnja','Višnja','Breskva','Nektarina',
+  'Kajsija','Vinova loza','Malina','Kupina','Jagoda','Borovnica',
+  'Orah','Lešnik',
+]
+
+const OPERATIONS: Array<{ name: string; applyTo: OpApplyTo }> = [
+  { name: 'Oranje', applyTo: 'WORK' },
+  { name: 'Podrivanje', applyTo: 'WORK' },
+  { name: 'Tanjiranje', applyTo: 'WORK' },
+  { name: 'Freziranje', applyTo: 'WORK' },
+  { name: 'Setvospremanje', applyTo: 'WORK' },
+  { name: 'Valjanje', applyTo: 'WORK' },
+
+  { name: 'Setva', applyTo: 'WORK' },
+  { name: 'Sadnja', applyTo: 'WORK' },
+  { name: 'Presađivanje', applyTo: 'WORK' },
+
+  { name: 'Đubrenje', applyTo: 'WORK' },
+  { name: 'Prihrana', applyTo: 'WORK' },
+  { name: 'Folijarna prihrana', applyTo: 'WORK' },
+
+  { name: 'Prskanje herbicidom', applyTo: 'WORK' },
+  { name: 'Prskanje fungicidom', applyTo: 'WORK' },
+  { name: 'Prskanje insekticidom', applyTo: 'WORK' },
+
+  { name: 'Međuredna kultivacija/Špartanje', applyTo: 'WORK' },
+  { name: 'Okopavanje', applyTo: 'WORK' },
+  { name: 'Malčiranje', applyTo: 'WORK' },
+  { name: 'Zalivanje / navodnjavanje', applyTo: 'WORK' },
+
+  { name: 'Rezidba', applyTo: 'WORK' },
+  { name: 'Košenje', applyTo: 'WORK' },
+
+  { name: 'Žetva', applyTo: 'WORK' },
+  { name: 'Berba', applyTo: 'WORK' },
+  { name: 'Baliranje', applyTo: 'WORK' },
+  { name: 'Siliranje', applyTo: 'WORK' },
+
+  { name: 'Utovar', applyTo: 'WORK' },
+  { name: 'Transport', applyTo: 'WORK' },
+  { name: 'Sušenje', applyTo: 'WORK' },
+  { name: 'Skladištenje', applyTo: 'WORK' },
+
+  { name: 'Usluga oranja', applyTo: 'SERVICE' },
+  { name: 'Usluga setve', applyTo: 'SERVICE' },
+  { name: 'Usluga prskanja', applyTo: 'SERVICE' },
+  { name: 'Usluga žetve', applyTo: 'SERVICE' },
+  { name: 'Usluga transporta', applyTo: 'SERVICE' },
+]
+
+async function api(path: string, init?: RequestInit) {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${ACCESS_TOKEN}`,
+      ...(init?.headers ?? {}),
     },
-  });
+  })
 
-  const crops = [
-    { name: "Pšenica" },
-    { name: "Kukuruz" },
-    { name: "Soja" },
-    { name: "Suncokret" },
-    { name: "Ječam" },
-    { name: "Uljana Repica" },
-    { name: "Šećerna Repa" },
-    { name: "Paprika" },
-    { name: "Luk" },
-    { name: "Krompir" },
-    { name: "Šargarepa" },
-    { name: "Kupus" },
-  ];
+  if (!res.ok) {
+    const t = await res.text().catch(() => '')
+    throw new Error(`${init?.method ?? 'GET'} ${path} -> ${res.status} ${t}`)
+  }
 
-  const operations: {
-    name: string;
-    applyTo: OperationApplyTo;
-    canonicalKey: string;
-    userName: string;
-    aliases: string[];
-  }[] = [
-    { name: "Oranje", applyTo: "BOTH", canonicalKey: "PLOWING", userName: "Oranje", aliases: [] },
-    { name: "Setva", applyTo: "BOTH", canonicalKey: "SOWING", userName: "Setva", aliases: [] },
-    { name: "Prskanje", applyTo: "BOTH", canonicalKey: "SPRAYING", userName: "Prskanje", aliases: [] },
-    { name: "Žetva", applyTo: "BOTH", canonicalKey: "HARVEST", userName: "Žetva", aliases: [] },
-    { name: "Transport", applyTo: "SERVICE", canonicalKey: "TRANSPORT", userName: "Transport", aliases: [] },
-    { name: "Špartanje", applyTo: "BOTH", canonicalKey: "CULTIVATION", userName: "Špartanje", aliases: [] },
-    { name: "Gruberovanje", applyTo: "BOTH", canonicalKey: "GRUBER", userName: "Gruberovanje", aliases: [] },
-    { name: "Podrivanje", applyTo: "BOTH", canonicalKey: "SUBSOILING", userName: "Podrivanje", aliases: [] },
-    { name: "Tanjiranje", applyTo: "BOTH", canonicalKey: "DISKING", userName: "Tanjiranje", aliases: [] },
-    { name: "Zalivanje", applyTo: "BOTH", canonicalKey: "IRRIGATION", userName: "Zalivanje", aliases: [] },
-    { name: "Branje", applyTo: "BOTH", canonicalKey: "PICKING", userName: "Branje", aliases: [] },
-    { name: "Baliranje", applyTo: "BOTH", canonicalKey: "BALING", userName: "Baliranje", aliases: [] },
-  ];
-
-  const fields = [
-    { name: "Velika Njiva", area: 5.5, unit: "ha", currentCrop: "Pšenica", aliases: [] },
-    { name: "Mala Livada", area: 2.3, unit: "ha", currentCrop: "Kukuruz", aliases: [] },
-    { name: "Vinograd", area: 1.2, unit: "ha", currentCrop: "Suncokret", aliases: [] },
-  ];
-
-  const clients = [
-    { name: "Jovan Jovanović", phone: "0641234567", location: "Novi Sad", aliases: [] },
-    { name: "Firma Agro", phone: "021123456", location: "Beograd", aliases: [] },
-  ];
-
-  const executors = [
-    { name: "Marko Marković", aliases: [] },
-    { name: "Petar Petrović", aliases: [] },
-    { name: "Zoran", aliases: [] },
-  ];
-
-  // Insert data
-  const cropRecords = await Promise.all(
-    crops.map((c) =>
-      prisma.crop.upsert({
-        where: { name_orgId: { name: c.name, orgId: org.id } },
-        update: {},
-        create: { name: c.name, orgId: org.id },
-      })
-    )
-  );
-
-  const operationRecords = await Promise.all(
-    operations.map((op) =>
-      prisma.operation.upsert({
-        where: { name_orgId: { name: op.name, orgId: org.id } },
-        update: {
-          applyTo: op.applyTo,
-          canonicalKey: op.canonicalKey ?? op.name.toLowerCase(),
-          userName: op.userName ?? op.name,
-        },
-        create: {
-          name: op.name,
-          applyTo: op.applyTo,
-          canonicalKey: op.canonicalKey ?? op.name.toLowerCase(),
-          userName: op.userName ?? op.name,
-          aliases: op.aliases ?? [],
-          orgId: org.id,
-        },
-      })
-    )
-  );
-
-  const fieldRecords = await Promise.all(
-    fields.map((f) => {
-      const cropId = cropRecords.find((c) => c.name === f.currentCrop)?.id;
-      return prisma.field.upsert({
-        where: { name_orgId: { name: f.name, orgId: org.id } },
-        update: { currentCropId: cropId || undefined },
-        create: {
-          name: f.name,
-          area: f.area,
-          unit: f.unit,
-          aliases: f.aliases ?? [],
-          currentCropId: cropId,
-          orgId: org.id,
-        },
-      });
-    })
-  );
-
-  const clientRecords = await Promise.all(
-    clients.map((c) =>
-      prisma.client.upsert({
-        where: { name_orgId: { name: c.name, orgId: org.id } },
-        update: {},
-        create: { name: c.name, phone: c.phone, location: c.location, aliases: c.aliases ?? [], orgId: org.id },
-      })
-    )
-  );
-
-  const executorRecords = await Promise.all(
-    executors.map((ex) =>
-      prisma.executor.upsert({
-        where: { name_orgId: { name: ex.name, orgId: org.id } },
-        update: {},
-        create: { name: ex.name, aliases: ex.aliases ?? [], orgId: org.id },
-      })
-    )
-  );
-
-  // Default admin user (needed for createdByUserId)
-  const adminUser = await prisma.user.upsert({
-    where: { email: "user@agro.local" },
-    update: {
-      name: "Default Admin",
-      passwordHash: "$2a$10$U5frAzlZk90un0nLBKBP/.ZiY4QmiFjCwXTlzAIXazhbugzuDUFcW",
-      role: "ADMIN",
-      isActive: true,
-      orgId: org.id,
-    },
-    create: {
-      name: "Default Admin",
-      email: "user@agro.local",
-      phone: "000-0000",
-      passwordHash: "$2a$10$U5frAzlZk90un0nLBKBP/.ZiY4QmiFjCwXTlzAIXazhbugzuDUFcW", // "password123"
-      role: "ADMIN",
-      isActive: true,
-      orgId: org.id,
-    },
-  });
-
-  // Sample entries
-  const today = new Date();
-  const yesterday = new Date(Date.now() - 24 * 3600 * 1000);
-  const twoDaysAgo = new Date(Date.now() - 2 * 24 * 3600 * 1000);
-
-  const opOranje = operationRecords.find((o) => o.name === "Oranje");
-  const opPrskanje = operationRecords.find((o) => o.name === "Prskanje");
-  const opSetva = operationRecords.find((o) => o.name === "Setva");
-
-  await prisma.workEntry.createMany({
-    data: [
-      {
-        date: today,
-        entryType: EntryType.WORK,
-        fieldId: fieldRecords[0].id,
-        operationId: opOranje?.id || operationRecords[0].id,
-        executorId: executorRecords[0].id,
-        status: EntryStatus.DONE,
-        source: EntrySource.WEB,
-        quantity: 5.5,
-        unit: "ha",
-        note: "Završeno pre kiše",
-        createdByUserId: adminUser.id,
-        orgId: org.id,
-      },
-      {
-        date: today,
-        entryType: EntryType.SERVICE,
-        clientId: clientRecords[0].id,
-        operationId: opPrskanje?.id || operationRecords[2].id,
-        cropId: cropRecords.find((c) => c.name === "Kukuruz")?.id,
-        executorId: executorRecords[1].id,
-        status: EntryStatus.IN_PROGRESS,
-        source: EntrySource.VOICE,
-        quantity: 10,
-        unit: "ha",
-        note: "Pera prska kod Jovana",
-        voiceOriginalText: "Pera prska kod Jovana",
-        createdByUserId: adminUser.id,
-        orgId: org.id,
-      },
-      {
-        date: yesterday,
-        entryType: EntryType.WORK,
-        fieldId: fieldRecords[1].id,
-        operationId: opSetva?.id || operationRecords[1].id,
-        cropId: cropRecords.find((c) => c.name === "Soja")?.id,
-        executorId: executorRecords[0].id,
-        status: EntryStatus.DONE,
-        source: EntrySource.WEB,
-        quantity: 2.3,
-        unit: "ha",
-        createdByUserId: adminUser.id,
-        orgId: org.id,
-      },
-      {
-        date: twoDaysAgo,
-        entryType: EntryType.SERVICE,
-        clientId: clientRecords[1].id,
-        operationId: operationRecords.find((o) => o.name === "Transport")?.id || operationRecords[4].id,
-        executorId: executorRecords[2].id,
-        status: EntryStatus.DONE,
-        source: EntrySource.WEB,
-        quantity: 8,
-        unit: "sati",
-        createdByUserId: adminUser.id,
-        orgId: org.id,
-      },
-    ],
-    skipDuplicates: true,
-  });
-
-  await prisma.yield.createMany({
-    data: [
-      {
-        year: 2023,
-        fieldId: fieldRecords[0].id,
-        cropId: cropRecords.find((c) => c.name === "Pšenica")?.id || cropRecords[0].id,
-        area: 5.5,
-        totalYield: 33000,
-        note: null,
-        orgId: org.id,
-      },
-      {
-        year: 2023,
-        fieldId: fieldRecords[1].id,
-        cropId: cropRecords.find((c) => c.name === "Soja")?.id || cropRecords[2].id,
-        area: 2.3,
-        totalYield: 8050,
-        note: null,
-        orgId: org.id,
-      },
-    ],
-    skipDuplicates: true,
-  });
-
-  console.log("Seed completed");
+  if (res.status === 204) return null
+  return res.json().catch(() => null)
 }
 
-main()
-  .catch((err) => {
-    console.error(err);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+async function main() {
+  if (!ACCESS_TOKEN) throw new Error('ACCESS_TOKEN nije postavljen')
+
+  const existingCrops: any[] = (await api('/crops')) ?? []
+  const cropNames = new Set(existingCrops.map((c) => String(c.name).toLowerCase()))
+
+  for (const name of CROPS) {
+    if (cropNames.has(name.toLowerCase())) continue
+    await api('/crops', { method: 'POST', body: JSON.stringify({ name }) })
+    console.log('CROP +', name)
+  }
+
+  const existingOps: any[] = (await api('/operations')) ?? []
+  const opNames = new Set(existingOps.map((o) => String(o.name).toLowerCase()))
+
+  for (const op of OPERATIONS) {
+    if (opNames.has(op.name.toLowerCase())) continue
+    await api('/operations', { method: 'POST', body: JSON.stringify(op) })
+    console.log('OP +', op.name)
+  }
+
+  console.log('SEED DONE')
+}
+
+main().catch((e) => {
+  console.error(e)
+  process.exit(1)
+})

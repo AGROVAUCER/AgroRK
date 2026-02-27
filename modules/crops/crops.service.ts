@@ -15,15 +15,11 @@ export const listCrops = async (orgId: string): Promise<CropRow[]> => {
 }
 
 export const createCrop = async (orgId: string, payload: any): Promise<CropRow> => {
-  const now = new Date().toISOString()
-
   const row = {
     id: randomUUID(),
     ...payload,
     aliases: payload?.aliases ?? [],
     orgId,
-    createdAt: now,
-    updatedAt: now,
   }
 
   const { data, error } = await supabaseAdmin
@@ -37,14 +33,14 @@ export const createCrop = async (orgId: string, payload: any): Promise<CropRow> 
 }
 
 export const updateCrop = async (orgId: string, id: string, patch: any): Promise<CropRow> => {
-  const now = new Date().toISOString()
+  const updateData: any = {}
+
+  if (patch?.name !== undefined) updateData.name = patch.name
+  if (patch?.aliases !== undefined) updateData.aliases = patch.aliases ?? []
 
   const { data, error } = await supabaseAdmin
     .from('Crop')
-    .update({
-      ...patch,
-      updatedAt: now,
-    })
+    .update(updateData)
     .eq('orgId', orgId)
     .eq('id', id)
     .select('*')
