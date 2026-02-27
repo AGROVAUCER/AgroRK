@@ -6,7 +6,6 @@ type OperationRow = any
 const toCanonicalKey = (name: string) => {
   const s = String(name ?? '').trim().toLowerCase()
 
-  // basic latinization for Serbian diacritics
   const latin = s
     .replace(/č/g, 'c')
     .replace(/ć/g, 'c')
@@ -43,13 +42,16 @@ export const createOperation = async (orgId: string, payload: OperationCreate): 
   const name = String(payload?.name ?? '').trim()
   const canonicalKey = String(payload?.canonicalKey ?? '').trim() || toCanonicalKey(name)
 
+  // DB constraint: userName NOT NULL
+  const userName = String(payload?.userName ?? '').trim() || 'SISTEM'
+
   const row = {
     id: randomUUID(),
     name,
     applyTo: payload.applyTo,
-    canonicalKey, // REQUIRED by DB
+    canonicalKey,
+    userName,
     aliases: payload?.aliases ?? [],
-    userName: payload?.userName ?? null,
     orgId,
   }
 
@@ -68,12 +70,16 @@ export const updateOperation = async (orgId: string, id: string, patch: any): Pr
 
   if (patch?.name !== undefined) updateData.name = String(patch.name).trim()
   if (patch?.applyTo !== undefined) updateData.applyTo = patch.applyTo
-  if (patch?.userName !== undefined) updateData.userName = patch.userName
   if (patch?.aliases !== undefined) updateData.aliases = patch.aliases ?? []
 
-  // allow explicit canonicalKey change OR regenerate if name changed and canonicalKey not provided
+  // DB constraint: userName NOT NULL (keep existing if not provided)
+  if (patch?.userName !== undefined) {
+    updateData.userName = String(patch.userName).trim() || 'SISTEM'
+  }
+
+  // canonicalKey: allow explicit change OR regenerate if name changed
   if (patch?.canonicalKey !== undefined) {
-    updateData.canonicalKey = String(patch.canonicalKey).trim()
+    updateData.canonicalKey = String(patch.canonicalKey).trim() || toCanonicalKey(String(updateData.name ?? ''))
   } else if (patch?.name !== undefined) {
     updateData.canonicalKey = toCanonicalKey(String(patch.name))
   }
