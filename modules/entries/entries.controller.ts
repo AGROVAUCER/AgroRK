@@ -1,4 +1,3 @@
-// modules/entries/entries.controller.ts
 import { Request, Response } from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
 import {
@@ -50,12 +49,15 @@ export const getEntryById = asyncHandler(async (req: Request, res: Response) => 
 });
 
 export const postEntry = asyncHandler(async (req: Request, res: Response) => {
-  const body = req.body;
+  const body = req.body ?? {};
+
   await ensureEntryRules(req.orgId!, body);
+
   const entry = await createEntry(req.orgId!, req.user?.id || "", {
     ...body,
     source: body.source || "WEB",
   });
+
   res.status(201).json(entry);
 });
 
@@ -67,8 +69,14 @@ export const patchEntry = asyncHandler(async (req: Request, res: Response) => {
     return res.status(403).json({ message: "Forbidden" });
   }
 
-  const body = req.body;
-  await ensureEntryRules(req.orgId!, { ...existing, ...body, entryType: body.entryType ?? existing.entryType });
+  const body = req.body ?? {};
+
+  await ensureEntryRules(req.orgId!, {
+    ...existing,
+    ...body,
+    entryType: body.entryType ?? existing.entryType,
+  });
+
   const updated = await updateEntry(req.orgId!, req.params.id, body);
   res.json(updated);
 });

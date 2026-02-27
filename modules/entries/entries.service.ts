@@ -58,8 +58,6 @@ export const listEntries = async (filters: ListFilters) => {
     q = q.or(`note.ilike.%${s}%,voiceOriginalText.ilike.%${s}%`)
   }
 
-  // cursor pagination (approx): fetch next page by date < cursor.date (stable sort)
-  // requires cursor to be an id; we first read cursor row to get its date.
   if (filters.cursor) {
     const { data: cursorRow, error: cursorErr } = await supabaseAdmin
       .from('WorkEntry')
@@ -108,6 +106,7 @@ export const ensureEntryRules = async (orgId: string, data: any) => {
     if (!data.fieldId) throw { status: 400, message: 'fieldId is required for WORK' }
     data.clientId = null
   }
+
   if (entryType === 'SERVICE') {
     if (!data.clientId) throw { status: 400, message: 'clientId is required for SERVICE' }
     data.fieldId = null
@@ -116,6 +115,11 @@ export const ensureEntryRules = async (orgId: string, data: any) => {
   if (!data.operationId) throw { status: 400, message: 'operationId is required' }
   if (!data.date) throw { status: 400, message: 'date is required' }
   if (!data.status) throw { status: 400, message: 'status is required' }
+
+  const source = (data.source ?? 'WEB') as EntrySource
+  if (source === 'VOICE' && !data.voiceOriginalText) {
+    throw { status: 400, message: 'voiceOriginalText is required when source=VOICE' }
+  }
 
   const { data: op, error } = await supabaseAdmin
     .from('Operation')
@@ -162,16 +166,16 @@ export const createEntry = async (orgId: string, createdByUserId: string, data: 
 }
 
 export const updateEntry = async (orgId: string, id: string, data: any) => {
-  const patch: any = {
-    entryType: data.entryType,
-    operationId: data.operationId,
-    quantity: data.quantity,
-    unit: data.unit,
-    status: data.status,
-    note: data.note,
-    source: data.source,
-    voiceOriginalText: data.voiceOriginalText,
-  }
+  const patch: any = {}
+
+  if (data.entryType !== undefined) patch.entryType = data.entryType
+  if (data.operationId !== undefined) patch.operationId = data.operationId
+  if (data.quantity !== undefined) patch.quantity = data.quantity
+  if (data.unit !== undefined) patch.unit = data.unit
+  if (data.status !== undefined) patch.status = data.status
+  if (data.note !== undefined) patch.note = data.note
+  if (data.source !== undefined) patch.source = data.source
+  if (data.voiceOriginalText !== undefined) patch.voiceOriginalText = data.voiceOriginalText
 
   if (data.date !== undefined) patch.date = data.date ? new Date(data.date).toISOString() : null
   if (data.fieldId !== undefined) patch.fieldId = data.fieldId ?? null
