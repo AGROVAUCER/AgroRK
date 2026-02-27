@@ -1,4 +1,3 @@
-
 // modules/entries/entries.schemas.ts
 import { z } from "zod";
 
@@ -10,7 +9,7 @@ const entryBodySchema = z.object({
   operationId: z.string(),
   cropId: z.string().nullable().optional(),
   executorId: z.string().nullable().optional(),
-  quantity: z.number().optional(),
+  quantity: z.number().nullable().optional(),
   unit: z.string().nullable().optional(),
   status: z.enum(["IN_PROGRESS", "DONE"]),
   note: z.string().nullable().optional(),
@@ -24,7 +23,5 @@ export const createEntrySchema = z.object({
 
 export const updateEntrySchema = z.object({
   params: z.object({ id: z.string() }),
-  body: entryBodySchema.partial().extend({
-    quantity: z.number().nullable().optional(),
-  }),
+  body: entryBodySchema.partial(),
 });
