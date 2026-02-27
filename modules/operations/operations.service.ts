@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto'
 import { supabaseAdmin } from '../../src/lib/supabaseAdmin'
 
 type OperationRow = any
@@ -13,11 +14,19 @@ export const listOperations = async (orgId: string): Promise<OperationRow[]> => 
   return data ?? []
 }
 
-export const createOperation = async (orgId: string, payload: any): Promise<OperationRow> => {
+export const createOperation = async (
+  orgId: string,
+  payload: any
+): Promise<OperationRow> => {
+  const now = new Date().toISOString()
+
   const row = {
+    id: randomUUID(),
     ...payload,
     aliases: payload?.aliases ?? [],
     orgId,
+    createdAt: now,
+    updatedAt: now,
   }
 
   const { data, error } = await supabaseAdmin
@@ -35,7 +44,11 @@ export const updateOperation = async (
   id: string,
   patch: any
 ): Promise<OperationRow> => {
-  const updateData: any = {}
+  const now = new Date().toISOString()
+
+  const updateData: any = { updatedAt: now }
+
+  if (patch?.name !== undefined) updateData.name = patch.name
   if (patch?.userName !== undefined) updateData.userName = patch.userName
   if (patch?.applyTo !== undefined) updateData.applyTo = patch.applyTo
   if (patch?.aliases !== undefined) updateData.aliases = patch.aliases ?? []
