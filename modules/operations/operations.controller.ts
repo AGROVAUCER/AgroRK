@@ -1,6 +1,11 @@
 import { Request, Response } from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
-import { createOperation, deleteOperation, listOperations, updateOperation } from "./operations.service";
+import {
+  createOperation,
+  deleteOperation,
+  listOperations,
+  updateOperation,
+} from "./operations.service";
 
 export const getOperations = asyncHandler(async (req: Request, res: Response) => {
   const data = await listOperations(req.orgId!);

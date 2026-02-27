@@ -32,17 +32,12 @@ export const createOperation = async (orgId: string, payload: any): Promise<Oper
   return data
 }
 
-export const updateOperation = async (
-  orgId: string,
-  id: string,
-  patch: any
-): Promise<OperationRow> => {
+export const updateOperation = async (orgId: string, id: string, patch: any): Promise<OperationRow> => {
   const updateData: any = {}
 
   if (patch?.name !== undefined) updateData.name = patch.name
-  if (patch?.type !== undefined) updateData.type = patch.type
-  if (patch?.userName !== undefined) updateData.userName = patch.userName
   if (patch?.applyTo !== undefined) updateData.applyTo = patch.applyTo
+  if (patch?.userName !== undefined) updateData.userName = patch.userName
   if (patch?.aliases !== undefined) updateData.aliases = patch.aliases ?? []
 
   const { data, error } = await supabaseAdmin

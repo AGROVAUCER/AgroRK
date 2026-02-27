@@ -12,6 +12,11 @@ router.use(auth({ optional: true }), orgScope);
 router.get("/", getOperations);
 router.post("/", validate(createOperationSchema), postOperation);
 router.put("/:id", validate(updateOperationSchema), putOperation);
-router.delete("/:id", (_req, res) => res.status(405).json({ message: "Deleting operations is not allowed" }));
+
+// ako stvarno ne želiš brisanje, ostavi 405 kao ranije. Ako želiš, otkomentariši removeOperation.
+// router.delete("/:id", removeOperation);
+router.delete("/:id", (_req, res) =>
+  res.status(405).json({ message: "Deleting operations is not allowed" })
+);
 
 export default router;
