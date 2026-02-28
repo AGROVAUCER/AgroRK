@@ -13,6 +13,7 @@ import usersRouter from "../modules/users/users.routes";
 import entriesRouter from "../modules/entries/entries.routes";
 import adminUsersRouter from "../modules/admin/admin.users.routes";
 import yieldsRouter from '../modules/yields/yields.routes'
+import fieldCropsRouter from '../modules/fieldCrops/fieldCrops.routes'
 
 import { auth } from "../middleware/auth";
 import { orgScope } from "../middleware/orgScope";
@@ -36,4 +37,5 @@ router.use("/operations", operationsRouter);
 router.use("/entries", entriesRouter);
 router.use("/admin", adminUsersRouter);
 router.use("/yields", yieldsRouter);
+router.use("/field-crops", fieldCropsRouter);
 export default router;

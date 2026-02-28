@@ -5,6 +5,7 @@ import { asyncHandler } from '../../utils/asyncHandler'
 import { supabaseAdmin } from '../../src/lib/supabaseAdmin'
 
 const router = Router()
+
 router.use(auth({ optional: true }), orgScope)
 
 router.get(
