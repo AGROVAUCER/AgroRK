@@ -2,6 +2,7 @@
 import type { Request, Response } from "express";
 import { asyncHandler } from "../../utils/asyncHandler";
 import {
+  findUserByIdentifier,
   findUserByEmailOrPhone,
   findUserById,
   signAccessToken,
@@ -13,19 +14,28 @@ import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 
 export const login = asyncHandler(async (req: Request, res: Response) => {
-  const { email, phone, password } = req.body ?? {};
+  const { identifier, email, phone, password } = req.body ?? {};
 
-  if (!password || (!email && !phone)) {
+  if (!password || (!identifier && !email && !phone)) {
     return res.status(400).json({ message: "Missing fields" });
   }
 
-  const normalizedEmail =
-    typeof email === "string" ? email.trim().toLowerCase() : null;
+  // glavna vrednost za lookup
+  const rawIdentifier =
+    typeof identifier === "string"
+      ? identifier.trim()
+      : typeof email === "string"
+        ? email.trim()
+        : typeof phone === "string"
+          ? phone.trim()
+          : "";
 
-  const normalizedPhone =
-    typeof phone === "string" ? phone.trim() : null;
+  if (!rawIdentifier) {
+    return res.status(400).json({ message: "Missing fields" });
+  }
 
-  const user = await findUserByEmailOrPhone(normalizedEmail, normalizedPhone);
+  const user = await findUserByIdentifier(rawIdentifier);
+
   if (!user || !user.isActive) {
     return res.status(401).json({ message: "Invalid credentials" });
   }
@@ -48,6 +58,8 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
       name: user.name,
       role: user.role,
       orgId: user.orgId,
+      username: user.username ?? null,
+      email: user.email ?? null,
     },
   });
 });
@@ -67,6 +79,8 @@ export const me = asyncHandler(async (req: any, res: Response) => {
     name: user.name,
     role: user.role,
     orgId: user.orgId,
+    username: user.username ?? null,
+    email: user.email ?? null,
   });
 });
 
@@ -80,15 +94,9 @@ export const signup = asyncHandler(async (req: Request, res: Response) => {
   const normalizedEmail =
     typeof email === "string" ? email.trim().toLowerCase() : null;
 
-  const normalizedPhone =
-    typeof phone === "string" ? phone.trim() : null;
+  const normalizedPhone = typeof phone === "string" ? phone.trim() : null;
 
-  // proveri da li već postoji user
-  const existing = await findUserByEmailOrPhone(
-    normalizedEmail,
-    normalizedPhone
-  );
-
+  const existing = await findUserByEmailOrPhone(normalizedEmail, normalizedPhone);
   if (existing) {
     return res.status(409).json({ message: "User already exists" });
   }
@@ -97,18 +105,19 @@ export const signup = asyncHandler(async (req: Request, res: Response) => {
 
   const now = new Date().toISOString();
 
-const newUser = {
-  id: randomUUID(),
-  name: String(name).trim(),
-  email: normalizedEmail,
-  phone: normalizedPhone,
-  passwordHash,
-  role: "USER",
-  isActive: true,
-  orgId: null,
-  createdAt: now,
-  updatedAt: now,
-};
+  const newUser = {
+    id: randomUUID(),
+    name: String(name).trim(),
+    email: normalizedEmail,
+    phone: normalizedPhone,
+    username: null, // signup flow ti je trenutno bez org-a; ostavljam kako je bilo
+    passwordHash,
+    role: "USER",
+    isActive: true,
+    orgId: null,
+    createdAt: now,
+    updatedAt: now,
+  };
 
   const { error } = await supabaseAdmin.from("User").insert(newUser);
 
@@ -129,6 +138,8 @@ const newUser = {
       name: newUser.name,
       role: newUser.role,
       orgId: newUser.orgId,
+      username: null,
+      email: newUser.email,
     },
   });
 });
