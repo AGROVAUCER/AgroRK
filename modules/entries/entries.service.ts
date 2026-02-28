@@ -151,6 +151,10 @@ export const createEntry = async (orgId: string, createdByUserId: string, data: 
     note: data.note ?? null,
     source: (data.source ?? 'WEB') as EntrySource,
     voiceOriginalText: data.voiceOriginalText ?? null,
+
+    // NEW
+    variety: data.variety ?? null,
+
     createdByUserId,
     orgId,
   }
@@ -176,6 +180,9 @@ export const updateEntry = async (orgId: string, id: string, data: any) => {
   if (data.note !== undefined) patch.note = data.note
   if (data.source !== undefined) patch.source = data.source
   if (data.voiceOriginalText !== undefined) patch.voiceOriginalText = data.voiceOriginalText
+
+  // NEW
+  if (data.variety !== undefined) patch.variety = data.variety
 
   if (data.date !== undefined) patch.date = data.date ? new Date(data.date).toISOString() : null
   if (data.fieldId !== undefined) patch.fieldId = data.fieldId ?? null

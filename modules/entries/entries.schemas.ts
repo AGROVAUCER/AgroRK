@@ -15,6 +15,9 @@ const entryBodySchema = z.object({
   note: z.string().nullable().optional(),
   source: z.enum(["VOICE", "WEB"]).optional(),
   voiceOriginalText: z.string().nullable().optional(),
+
+  // NEW
+  variety: z.string().nullable().optional(),
 });
 
 export const createEntrySchema = z.object({
