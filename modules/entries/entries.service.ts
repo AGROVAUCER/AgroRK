@@ -1,5 +1,5 @@
 import { supabaseAdmin } from '../../src/lib/supabaseAdmin'
-
+import { upsertActiveFieldCrop } from '../fieldCrops/fieldCrops.service'
 export type EntryType = 'WORK' | 'SERVICE'
 export type EntryStatus = 'IN_PROGRESS' | 'DONE'
 export type EntrySource = 'VOICE' | 'WEB'
@@ -136,6 +136,41 @@ export const ensureEntryRules = async (orgId: string, data: any) => {
   }
 }
 
+/** NEW: posle create/update, ako je setva/sadnja, upisi FieldCrop */
+const maybeUpsertFieldCropFromEntry = async (orgId: string, entry: any) => {
+  const entryType = String(entry?.entryType ?? '')
+  const fieldId = entry?.fieldId ?? null
+  const cropId = entry?.cropId ?? null
+  const operationId = entry?.operationId ?? null
+
+  if (entryType !== 'WORK') return
+  if (!fieldId || !cropId || !operationId) return
+
+  const { data: op, error } = await supabaseAdmin
+    .from('Operation')
+    .select('canonicalKey')
+    .eq('orgId', orgId)
+    .eq('id', operationId)
+    .maybeSingle<{ canonicalKey: string | null }>()
+
+  if (error) throw new Error(error.message)
+
+  const key = String(op?.canonicalKey ?? '').toUpperCase()
+  const isSowing = key === 'SOWING' || key === 'PLANTING'
+  if (!isSowing) return
+
+  const dateYMD = String(entry?.date ?? '').slice(0, 10) || new Date().toISOString().slice(0, 10)
+
+  await upsertActiveFieldCrop({
+    orgId,
+    fieldId: String(fieldId),
+    cropId: String(cropId),
+    variety: entry?.variety ?? null,
+    sownAt: dateYMD,
+    entryId: String(entry?.id),
+  })
+}
+
 export const createEntry = async (orgId: string, createdByUserId: string, data: any) => {
   const payload = {
     date: data.date ? new Date(data.date).toISOString() : new Date().toISOString(),
@@ -151,10 +186,7 @@ export const createEntry = async (orgId: string, createdByUserId: string, data: 
     note: data.note ?? null,
     source: (data.source ?? 'WEB') as EntrySource,
     voiceOriginalText: data.voiceOriginalText ?? null,
-
-    // NEW
     variety: data.variety ?? null,
-
     createdByUserId,
     orgId,
   }
@@ -166,6 +198,10 @@ export const createEntry = async (orgId: string, createdByUserId: string, data: 
     .single<WorkEntryRow>()
 
   if (error) throw new Error(error.message)
+
+  // NEW
+  await maybeUpsertFieldCropFromEntry(orgId, row)
+
   return row
 }
 
@@ -180,8 +216,6 @@ export const updateEntry = async (orgId: string, id: string, data: any) => {
   if (data.note !== undefined) patch.note = data.note
   if (data.source !== undefined) patch.source = data.source
   if (data.voiceOriginalText !== undefined) patch.voiceOriginalText = data.voiceOriginalText
-
-  // NEW
   if (data.variety !== undefined) patch.variety = data.variety
 
   if (data.date !== undefined) patch.date = data.date ? new Date(data.date).toISOString() : null
@@ -199,6 +233,10 @@ export const updateEntry = async (orgId: string, id: string, data: any) => {
     .single<WorkEntryRow>()
 
   if (error) throw new Error(error.message)
+
+  // NEW
+  await maybeUpsertFieldCropFromEntry(orgId, row)
+
   return row
 }
 
