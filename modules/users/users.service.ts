@@ -1,61 +1,129 @@
-import bcrypt from "bcryptjs";
-import { supabaseAdmin } from "../../src/lib/supabaseAdmin";
+import { randomUUID } from "crypto";
+import { supabaseAdmin } from "../../lib/supabaseAdmin";
 
-type UserRow = any;
+export type CreateUserInput = {
+  name: string;
+  username?: string | null;
+  email?: string | null;
+  passwordHash: string;
+  role: "ADMIN" | "USER";
+  isActive?: boolean;
+};
 
-export const listUsers = async (orgId: string): Promise<UserRow[]> => {
-  const { data, error } = await supabaseAdmin
+/* =========================================================
+   LIST USERS (org scoped, without super admin)
+========================================================= */
+
+export async function listUsers(orgId: string) {
+  const superAdminEmail = String(process.env.SUPER_ADMIN_EMAIL ?? "")
+    .toLowerCase()
+    .trim();
+
+  let query = supabaseAdmin
     .from("User")
-    .select("*")
+    .select(
+      "id,name,username,email,role,isActive,createdAt,updatedAt"
+    )
     .eq("orgId", orgId)
-    .order("createdAt", { ascending: false });
+    .order("createdAt", { ascending: true });
 
-  if (error) throw new Error(error.message);
-  return data ?? [];
-};
-
-export const createUser = async (orgId: string, payload: any): Promise<UserRow> => {
-  const passwordHash = await bcrypt.hash(payload.password, 10);
-
-  const row = {
-    name: payload.name,
-    username: payload.username, // NOVO
-    email: payload.email ?? null,
-    phone: payload.phone ?? null,
-    passwordHash,
-    role: payload.role,
-    isActive: payload.isActive ?? true,
-    orgId,
-  };
-
-  const { data, error } = await supabaseAdmin.from("User").insert(row).select("*").single();
-
-  if (error) throw new Error(error.message);
-  return data;
-};
-
-export const updateUser = async (orgId: string, id: string, patch: any): Promise<UserRow> => {
-  const updateData: any = {
-    name: patch.name,
-    username: patch.username, // NOVO
-    email: patch.email,
-    phone: patch.phone,
-    role: patch.role,
-    isActive: patch.isActive,
-  };
-
-  if (patch.password) {
-    updateData.passwordHash = await bcrypt.hash(patch.password, 10);
+  if (superAdminEmail) {
+    query = query.neq("email", superAdminEmail);
   }
 
+  const { data, error } = await query;
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data ?? [];
+}
+
+/* =========================================================
+   CREATE USER (UUID fix + org scoped)
+========================================================= */
+
+export async function createUser(
+  orgId: string,
+  input: CreateUserInput
+) {
+  const id = randomUUID();
+
+  const row = {
+    id,
+    orgId,
+    name: input.name,
+    username: input.username ?? null,
+    email: input.email ?? null,
+    passwordHash: input.passwordHash,
+    role: input.role,
+    isActive: input.isActive ?? true,
+  };
+
   const { data, error } = await supabaseAdmin
     .from("User")
-    .update(updateData)
-    .eq("orgId", orgId)
-    .eq("id", id)
-    .select("*")
+    .insert(row)
+    .select(
+      "id,name,username,email,role,isActive,createdAt,updatedAt"
+    )
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    throw new Error(error.message);
+  }
+
   return data;
-};
+}
+
+/* =========================================================
+   UPDATE ROLE
+========================================================= */
+
+export async function updateUserRole(
+  orgId: string,
+  userId: string,
+  role: "ADMIN" | "USER"
+) {
+  const { data, error } = await supabaseAdmin
+    .from("User")
+    .update({ role })
+    .eq("id", userId)
+    .eq("orgId", orgId)
+    .select(
+      "id,name,username,email,role,isActive,createdAt,updatedAt"
+    )
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data;
+}
+
+/* =========================================================
+   SET ACTIVE / BLOCK
+========================================================= */
+
+export async function setUserActive(
+  orgId: string,
+  userId: string,
+  isActive: boolean
+) {
+  const { data, error } = await supabaseAdmin
+    .from("User")
+    .update({ isActive })
+    .eq("id", userId)
+    .eq("orgId", orgId)
+    .select(
+      "id,name,username,email,role,isActive,createdAt,updatedAt"
+    )
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data;
+}
