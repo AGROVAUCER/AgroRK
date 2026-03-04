@@ -51,7 +51,7 @@ export const findUserByEmailOrPhone = async (
 
   let q = supabaseAdmin.from("User").select("*").limit(1);
 
-  if (email) q = q.eq("email", normalizeEmail(email));
+  if (email) q = q.ilike("email", normalizeEmail(email));
   if (phone) q = q.eq("phone", phone);
 
   const { data, error } = await q.maybeSingle();
@@ -82,11 +82,11 @@ export const findUserByIdentifier = async (identifierRaw: string): Promise<UserR
 
   // 1) email
   {
-    const email = identifier.toLowerCase();
+    const email = normalizeEmail(identifier);
     const { data, error } = await supabaseAdmin
       .from("User")
       .select("*")
-      .eq("email", email)
+      .ilike("email", email)
       .limit(1)
       .maybeSingle();
 

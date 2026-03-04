@@ -63,8 +63,9 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const user = await findUserByIdentifier(rawIdentifier);
+  const role = user ? resolveJwtRole(user) : null;
 
-  if (!user || !user.isActive) {
+  if (!user || (!user.isActive && role !== "SUPER_ADMIN")) {
     return res.status(401).json({ message: "Invalid credentials" });
   }
 
@@ -73,13 +74,13 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
     return res.status(401).json({ message: "Invalid credentials" });
   }
 
+  const resolvedRole = role!;
   const ensuredOrgId = await ensureUserOrgId(user);
-  const role = resolveJwtRole(user);
 
   const token = signAccessToken({
     id: user.id,
     orgId: ensuredOrgId,
-    role,
+    role: resolvedRole,
   });
 
   return res.json({
@@ -88,7 +89,7 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
       id: user.id,
       name: user.name,
       email: user.email ?? null,
-      role,
+      role: resolvedRole,
       orgId: ensuredOrgId,
     },
   });
@@ -100,18 +101,19 @@ export const me = asyncHandler(async (req: any, res: Response) => {
   }
 
   const user = await findUserById(req.user.id);
-  if (!user || !user.isActive) {
+  const role = user ? resolveJwtRole(user) : null;
+  if (!user || (!user.isActive && role !== "SUPER_ADMIN")) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
   const ensuredOrgId = await ensureUserOrgId(user);
-  const role = resolveJwtRole(user);
+  const resolvedRole = role!;
 
   return res.json({
     id: user.id,
     name: user.name,
     email: user.email ?? null,
-    role,
+    role: resolvedRole,
     orgId: ensuredOrgId,
   });
 });
