@@ -1,6 +1,7 @@
 // modules/admin/admin.routes.ts
 import { Router } from "express";
 import { auth } from "../../middleware/auth";
+import { requireRole } from "../../middleware/requireRole";
 import { validate } from "../../utils/validate";
 import {
   approveSignupRequestSchema,
@@ -11,7 +12,7 @@ import { approveSignup, getSignupRequests, rejectSignup } from "./admin.controll
 
 const router = Router();
 
-router.use(auth());
+router.use(auth(), requireRole(["SUPER_ADMIN"]));
 
 router.get(
   "/signup-requests",

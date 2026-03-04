@@ -4,7 +4,9 @@ import { asyncHandler } from "../../utils/asyncHandler";
 import {
   findUserByIdentifier,
   findUserByEmailOrPhone,
+  findUserByUsername,
   findUserById,
+  resolveJwtRole,
   signAccessToken,
   verifyPassword,
 } from "./auth.service";
@@ -12,26 +14,30 @@ import {
 import { supabaseAdmin } from "../../src/lib/supabaseAdmin";
 import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
+import { createOrganization } from "../organizations/organizations.service";
+import { isSuperAdminEmail } from "../../config/auth";
+
+const missingOrgResponse = { message: "Missing orgId for user account" };
 
 export const login = asyncHandler(async (req: Request, res: Response) => {
-  const { identifier, email, phone, password } = req.body ?? {};
+  const { identifier, email, username, password } = req.body ?? {};
 
-  if (!password || (!identifier && !email && !phone)) {
+  if (!password || (!identifier && !email && !username)) {
     return res.status(400).json({ message: "Missing fields" });
   }
 
-  // glavna vrednost za lookup
+  // glavna vrednost za lookup (email ili username)
   const rawIdentifier =
-    typeof identifier === "string"
-      ? identifier.trim()
-      : typeof email === "string"
-        ? email.trim()
-        : typeof phone === "string"
-          ? phone.trim()
+    typeof email === "string"
+      ? email.trim()
+      : typeof username === "string"
+        ? username.trim()
+        : typeof identifier === "string"
+          ? identifier.trim()
           : "";
 
   if (!rawIdentifier) {
-    return res.status(400).json({ message: "Missing fields" });
+    return res.status(400).json({ message: "email or username is required" });
   }
 
   const user = await findUserByIdentifier(rawIdentifier);
@@ -45,10 +51,15 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
     return res.status(401).json({ message: "Invalid credentials" });
   }
 
+  const role = resolveJwtRole(user);
+  if (role !== "SUPER_ADMIN" && !user.orgId) {
+    return res.status(401).json(missingOrgResponse);
+  }
+
   const token = signAccessToken({
     id: user.id,
-    orgId: user.orgId,
-    role: user.role,
+    orgId: user.orgId ?? null,
+    role,
   });
 
   return res.json({
@@ -56,10 +67,9 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
     user: {
       id: user.id,
       name: user.name,
-      role: user.role,
-      orgId: user.orgId,
-      username: user.username ?? null,
       email: user.email ?? null,
+      role,
+      orgId: user.orgId,
     },
   });
 });
@@ -74,20 +84,24 @@ export const me = asyncHandler(async (req: any, res: Response) => {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
+  const role = resolveJwtRole(user);
+  if (role !== "SUPER_ADMIN" && !user.orgId) {
+    return res.status(401).json(missingOrgResponse);
+  }
+
   return res.json({
     id: user.id,
     name: user.name,
-    role: user.role,
-    orgId: user.orgId,
-    username: user.username ?? null,
     email: user.email ?? null,
+    role,
+    orgId: user.orgId,
   });
 });
 
 export const signup = asyncHandler(async (req: Request, res: Response) => {
-  const { name, email, phone, password } = req.body ?? {};
+  const { name, email, phone, username, password } = req.body ?? {};
 
-  if (!name || !password || (!email && !phone)) {
+  if (!name || !password || (!email && !username)) {
     return res.status(400).json({ message: "Missing fields" });
   }
 
@@ -96,13 +110,25 @@ export const signup = asyncHandler(async (req: Request, res: Response) => {
 
   const normalizedPhone = typeof phone === "string" ? phone.trim() : null;
 
+  if (isSuperAdminEmail(normalizedEmail)) {
+    return res.status(403).json({ message: "Reserved SUPER_ADMIN account" });
+  }
+
   const existing = await findUserByEmailOrPhone(normalizedEmail, normalizedPhone);
   if (existing) {
     return res.status(409).json({ message: "User already exists" });
   }
 
+  if (typeof username === "string" && username.trim()) {
+    const existingByUsername = await findUserByUsername(username);
+    if (existingByUsername) {
+      return res.status(409).json({ message: "Username already exists" });
+    }
+  }
+
   const passwordHash = await bcrypt.hash(String(password), 10);
 
+  const tenant = await createOrganization(String(name));
   const now = new Date().toISOString();
 
   const newUser = {
@@ -110,11 +136,11 @@ export const signup = asyncHandler(async (req: Request, res: Response) => {
     name: String(name).trim(),
     email: normalizedEmail,
     phone: normalizedPhone,
-    username: null, // signup flow ti je trenutno bez org-a; ostavljam kako je bilo
+    username: typeof username === "string" ? username.trim() || null : null,
     passwordHash,
-    role: "USER",
+    role: "ADMIN",
     isActive: true,
-    orgId: null,
+    orgId: tenant.id,
     createdAt: now,
     updatedAt: now,
   };
@@ -125,10 +151,11 @@ export const signup = asyncHandler(async (req: Request, res: Response) => {
     return res.status(500).json({ message: error.message });
   }
 
+  const role = resolveJwtRole(newUser);
   const token = signAccessToken({
     id: newUser.id,
     orgId: newUser.orgId,
-    role: newUser.role,
+    role,
   });
 
   return res.status(201).json({
@@ -136,10 +163,9 @@ export const signup = asyncHandler(async (req: Request, res: Response) => {
     user: {
       id: newUser.id,
       name: newUser.name,
-      role: newUser.role,
-      orgId: newUser.orgId,
-      username: null,
       email: newUser.email,
+      role,
+      orgId: newUser.orgId,
     },
   });
 });

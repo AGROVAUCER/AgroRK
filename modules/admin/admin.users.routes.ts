@@ -13,7 +13,7 @@ const router = Router();
  * Super admin global scope
  * NEMA orgScope jer mora da vidi sve organizacije
  */
-router.use(auth(), requireRole(["ADMIN"]));
+router.use(auth(), requireRole(["SUPER_ADMIN"]));
 
 /**
  * GET /api/v1/admin/users

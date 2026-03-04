@@ -2,6 +2,8 @@
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { supabaseAdmin } from "../../src/lib/supabaseAdmin";
+import { createOrganization } from "../organizations/organizations.service";
+import { isSuperAdminEmail } from "../../config/auth";
 
 export type SignupRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
 
@@ -23,6 +25,12 @@ export async function createSignupRequest(input: {
   phone: string | null;
   password: string;
 }) {
+  if (isSuperAdminEmail(input.email)) {
+    const e: any = new Error("Reserved SUPER_ADMIN account");
+    e.status = 403;
+    throw e;
+  }
+
   const id = crypto.randomUUID();
   const passwordHash = await bcrypt.hash(input.password, 10);
   const now = new Date().toISOString();
@@ -83,18 +91,30 @@ export async function rejectSignupRequest(id: string, note?: string | null) {
 
 export async function approveSignupRequest(input: {
   requestId: string;
-  orgId: string;
+  orgId?: string;
   role: "ADMIN" | "USER";
 }) {
   const reqRow = await getSignupRequestById(input.requestId);
   if (!reqRow) {
     const e: any = new Error("Not found");
-    e.statusCode = 404;
+    e.status = 404;
     throw e;
   }
   if (reqRow.status !== "PENDING") {
     const e: any = new Error("Not pending");
-    e.statusCode = 409;
+    e.status = 409;
+    throw e;
+  }
+
+  let orgId = String(input.orgId ?? "").trim();
+  if (input.role === "ADMIN" && !orgId) {
+    const tenant = await createOrganization(reqRow.name);
+    orgId = tenant.id;
+  }
+
+  if (!orgId) {
+    const e: any = new Error("orgId is required for USER role");
+    e.status = 400;
     throw e;
   }
 
@@ -109,7 +129,7 @@ export async function approveSignupRequest(input: {
     passwordHash: reqRow.passwordHash,
     role: input.role,
     isActive: true,
-    orgId: input.orgId,
+    orgId,
     createdAt: now,
     updatedAt: now,
   });

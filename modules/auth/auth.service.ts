@@ -2,6 +2,7 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { supabaseAdmin } from "../../src/lib/supabaseAdmin";
+import { normalizeEmail, resolveAppRole, type AppRole } from "../../config/auth";
 
 type UserRow = any;
 
@@ -11,7 +12,7 @@ const JWT_SECRET = (() => {
   return v;
 })();
 
-export const signAccessToken = (payload: { id: string; orgId: string | null; role: string }) => {
+export const signAccessToken = (payload: { id: string; orgId: string | null; role: AppRole }) => {
   return jwt.sign(
     {
       sub: payload.id,
@@ -26,6 +27,9 @@ export const signAccessToken = (payload: { id: string; orgId: string | null; rol
 export const verifyPassword = async (passwordHash: string, password: string) => {
   return bcrypt.compare(String(password), String(passwordHash));
 };
+
+export const resolveJwtRole = (user: { role?: string | null; email?: string | null }): AppRole =>
+  resolveAppRole(user.role ?? "USER", user.email ?? null);
 
 export const findUserById = async (id: string): Promise<UserRow | null> => {
   const { data, error } = await supabaseAdmin
@@ -47,7 +51,7 @@ export const findUserByEmailOrPhone = async (
 
   let q = supabaseAdmin.from("User").select("*").limit(1);
 
-  if (email) q = q.eq("email", email);
+  if (email) q = q.eq("email", normalizeEmail(email));
   if (phone) q = q.eq("phone", phone);
 
   const { data, error } = await q.maybeSingle();
@@ -56,7 +60,22 @@ export const findUserByEmailOrPhone = async (
   return data ?? null;
 };
 
-// NOVO: login lookup email -> username -> phone (da ne polomi stare logine)
+export const findUserByUsername = async (usernameRaw: string): Promise<UserRow | null> => {
+  const username = String(usernameRaw ?? "").trim();
+  if (!username) return null;
+
+  const { data, error } = await supabaseAdmin
+    .from("User")
+    .select("*")
+    .eq("username", username)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return data ?? null;
+};
+
+// login lookup email -> username
 export const findUserByIdentifier = async (identifierRaw: string): Promise<UserRow | null> => {
   const identifier = String(identifierRaw ?? "").trim();
   if (!identifier) return null;
@@ -81,19 +100,6 @@ export const findUserByIdentifier = async (identifierRaw: string): Promise<UserR
       .from("User")
       .select("*")
       .eq("username", identifier)
-      .limit(1)
-      .maybeSingle();
-
-    if (error) throw new Error(error.message);
-    if (data) return data;
-  }
-
-  // 3) phone (legacy)
-  {
-    const { data, error } = await supabaseAdmin
-      .from("User")
-      .select("*")
-      .eq("phone", identifier)
       .limit(1)
       .maybeSingle();
 

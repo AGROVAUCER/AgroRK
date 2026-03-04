@@ -65,7 +65,11 @@ export const patchEntry = asyncHandler(async (req: Request, res: Response) => {
   const existing = await getEntry(req.orgId!, req.params.id);
   if (!existing) return res.status(404).json({ message: "Not found" });
 
-  if (req.user?.role !== "ADMIN" && existing.createdByUserId !== req.user?.id) {
+  if (
+    req.user?.role !== "ADMIN" &&
+    req.user?.role !== "SUPER_ADMIN" &&
+    existing.createdByUserId !== req.user?.id
+  ) {
     return res.status(403).json({ message: "Forbidden" });
   }
 
@@ -85,7 +89,11 @@ export const removeEntry = asyncHandler(async (req: Request, res: Response) => {
   const existing = await getEntry(req.orgId!, req.params.id);
   if (!existing) return res.status(404).json({ message: "Not found" });
 
-  if (req.user?.role !== "ADMIN" && existing.createdByUserId !== req.user?.id) {
+  if (
+    req.user?.role !== "ADMIN" &&
+    req.user?.role !== "SUPER_ADMIN" &&
+    existing.createdByUserId !== req.user?.id
+  ) {
     return res.status(403).json({ message: "Forbidden" });
   }
 

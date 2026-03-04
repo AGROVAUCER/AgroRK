@@ -12,7 +12,7 @@ export const approveSignupRequestSchema = z.object({
     id: z.string().min(1),
   }),
   body: z.object({
-    orgId: z.string().min(1),
+    orgId: z.string().min(1).optional(),
     role: z.enum(["ADMIN", "USER"]),
   }),
 });

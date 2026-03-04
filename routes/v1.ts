@@ -22,8 +22,9 @@ const router = Router();
 
 router.use("/auth", authRouter);
 
-// admin endpoints: auth only (no orgScope)
+// super admin endpoints: global scope (no orgScope)
 router.use("/admin", adminRouter);
+router.use("/admin", adminUsersRouter);
 
 // all other v1 routes require auth + orgScope
 router.use(auth(), orgScope);
@@ -35,7 +36,6 @@ router.use("/executors", executorsRouter);
 router.use("/fields", fieldsRouter);
 router.use("/operations", operationsRouter);
 router.use("/entries", entriesRouter);
-router.use("/admin", adminUsersRouter);
 router.use("/yields", yieldsRouter);
 router.use("/field-crops", fieldCropsRouter);
 export default router;

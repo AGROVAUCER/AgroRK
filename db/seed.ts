@@ -10,16 +10,9 @@ const ACCESS_TOKEN = process.env.ACCESS_TOKEN ?? ''
 type OpApplyTo = 'WORK' | 'SERVICE' | 'BOTH'
 
 const CROPS = [
-  'Pšenica', 'Kukuruz', 'Ječam', 'Ovas', 'Raž', 'Tritikale', 'Sirak',
-  'Suncokret', 'Soja', 'Uljana repica', 'Šećerna repa', 'Duvan',
-  'Lucerka', 'Detelina (crvena)', 'Detelina (bela)',
-  'Krompir', 'Crni luk', 'Beli luk', 'Šargarepa', 'Cvekla', 'Kupus',
-  'Karfiol', 'Brokoli', 'Paprika', 'Paradajz', 'Krastavac', 'Tikvica',
-  'Boranija', 'Grašak', 'Pasulj', 'Spanać', 'Zelena salata', 'Patlidžan',
-  'Lubenica', 'Dinja',
-  'Šljiva', 'Jabuka', 'Kruška', 'Trešnja', 'Višnja', 'Breskva', 'Nektarina',
-  'Kajsija', 'Vinova loza', 'Malina', 'Kupina', 'Jagoda', 'Borovnica',
-  'Orah', 'Lešnik',
+  'Pšenica', 'Kukuruz', 'Ječam', 'Tritikale',
+  'Suncokret', 'Soja', 'Uljana repica', 'Šćerna repa', 
+  'Lucerka', 'Detelina', 'Krompir', 'Luk', 'Kupus',
 ]
 
 const OPERATIONS: Array<{ name: string; applyTo: OpApplyTo; aliases?: string[] }> = [
@@ -27,11 +20,11 @@ const OPERATIONS: Array<{ name: string; applyTo: OpApplyTo; aliases?: string[] }
   { name: 'Podrivanje', applyTo: 'WORK' },
   { name: 'Tanjiranje', applyTo: 'WORK' },
   { name: 'Freziranje', applyTo: 'WORK' },
-  { name: 'Predsetvena priprema', applyTo: 'WORK' },
+  { name: 'Setvospremanje', applyTo: 'WORK' },
   { name: 'Valjanje', applyTo: 'WORK' },
 
   { name: 'Setva', applyTo: 'WORK' },
-  { name: 'Sadnja', applyTo: 'WORK' },
+
   { name: 'Presađivanje', applyTo: 'WORK' },
 
   { name: 'Osnovno đubrenje', applyTo: 'WORK' },
@@ -44,15 +37,15 @@ const OPERATIONS: Array<{ name: string; applyTo: OpApplyTo; aliases?: string[] }
 
   { name: 'Međuredna kultivacija', applyTo: 'WORK' },
   { name: 'Okopavanje', applyTo: 'WORK' },
-  { name: 'Malčiranje', applyTo: 'WORK' },
+ 
   { name: 'Zalivanje / navodnjavanje', applyTo: 'WORK' },
 
-  { name: 'Rezidba', applyTo: 'WORK' },
+ 
   { name: 'Košenje', applyTo: 'WORK' },
 
   { name: 'Žetva', applyTo: 'WORK' },
   { name: 'Berba', applyTo: 'WORK' },
-  { name: 'Balenje', applyTo: 'WORK' },
+  { name: 'Baliranje', applyTo: 'WORK' },
   { name: 'Siliranje', applyTo: 'WORK' },
 
   { name: 'Utovar', applyTo: 'WORK' },

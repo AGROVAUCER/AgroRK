@@ -7,17 +7,7 @@ import {
   rejectSignupRequest,
 } from "../signupRequests/signupRequests.service";
 
-function requireAdmin(req: any, res: Response) {
-  if (!req.user?.role || req.user.role !== "ADMIN") {
-    res.status(403).json({ message: "Forbidden" });
-    return false;
-  }
-  return true;
-}
-
 export const getSignupRequests = asyncHandler(async (req: any, res: Response) => {
-  if (!requireAdmin(req, res)) return;
-
   const status = req.query?.status as any;
   const data = await listSignupRequests(status);
 
@@ -25,8 +15,6 @@ export const getSignupRequests = asyncHandler(async (req: any, res: Response) =>
 });
 
 export const approveSignup = asyncHandler(async (req: any, res: Response) => {
-  if (!requireAdmin(req, res)) return;
-
   const requestId = req.params.id;
   const { orgId, role } = req.body ?? {};
 
@@ -40,8 +28,6 @@ export const approveSignup = asyncHandler(async (req: any, res: Response) => {
 });
 
 export const rejectSignup = asyncHandler(async (req: any, res: Response) => {
-  if (!requireAdmin(req, res)) return;
-
   const requestId = req.params.id;
   const note = req.body?.note;
 
