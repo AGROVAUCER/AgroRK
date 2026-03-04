@@ -35,7 +35,7 @@ const OPERATIONS: Array<{ name: string; applyTo: OpApplyTo; aliases?: string[] }
   { name: 'Prskanje fungicidom', applyTo: 'WORK' },
   { name: 'Prskanje insekticidom', applyTo: 'WORK' },
 
-  { name: 'Međuredna kultivacija', applyTo: 'WORK' },
+  { name: 'Špartanje', applyTo: 'WORK' },
   { name: 'Okopavanje', applyTo: 'WORK' },
  
   { name: 'Zalivanje / navodnjavanje', applyTo: 'WORK' },
@@ -50,8 +50,7 @@ const OPERATIONS: Array<{ name: string; applyTo: OpApplyTo; aliases?: string[] }
 
   { name: 'Utovar', applyTo: 'WORK' },
   { name: 'Transport', applyTo: 'WORK' },
-  { name: 'Sušenje', applyTo: 'WORK' },
-  { name: 'Skladištenje', applyTo: 'WORK' },
+
 
   { name: 'Usluga oranja', applyTo: 'SERVICE' },
   { name: 'Usluga setve', applyTo: 'SERVICE' },
