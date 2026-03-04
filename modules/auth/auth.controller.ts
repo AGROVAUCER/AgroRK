@@ -17,7 +17,29 @@ import { randomUUID } from "crypto";
 import { createOrganization } from "../organizations/organizations.service";
 import { isSuperAdminEmail } from "../../config/auth";
 
-const missingOrgResponse = { message: "Missing orgId for user account" };
+const ensureUserOrgId = async (user: any): Promise<string | null> => {
+  const role = resolveJwtRole(user);
+  if (role === "SUPER_ADMIN") return null;
+
+  const currentOrgId =
+    typeof user?.orgId === "string" && user.orgId.trim().length > 0
+      ? user.orgId
+      : null;
+
+  if (currentOrgId) return currentOrgId;
+
+  const tenant = await createOrganization(String(user?.name ?? "Nova organizacija"));
+  const now = new Date().toISOString();
+
+  const { error } = await supabaseAdmin
+    .from("User")
+    .update({ orgId: tenant.id, updatedAt: now })
+    .eq("id", user.id);
+
+  if (error) throw new Error(error.message);
+
+  return tenant.id;
+};
 
 export const login = asyncHandler(async (req: Request, res: Response) => {
   const { identifier, email, username, password } = req.body ?? {};
@@ -51,14 +73,12 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
     return res.status(401).json({ message: "Invalid credentials" });
   }
 
+  const ensuredOrgId = await ensureUserOrgId(user);
   const role = resolveJwtRole(user);
-  if (role !== "SUPER_ADMIN" && !user.orgId) {
-    return res.status(401).json(missingOrgResponse);
-  }
 
   const token = signAccessToken({
     id: user.id,
-    orgId: user.orgId ?? null,
+    orgId: ensuredOrgId,
     role,
   });
 
@@ -69,7 +89,7 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
       name: user.name,
       email: user.email ?? null,
       role,
-      orgId: user.orgId,
+      orgId: ensuredOrgId,
     },
   });
 });
@@ -84,17 +104,15 @@ export const me = asyncHandler(async (req: any, res: Response) => {
     return res.status(401).json({ message: "Unauthorized" });
   }
 
+  const ensuredOrgId = await ensureUserOrgId(user);
   const role = resolveJwtRole(user);
-  if (role !== "SUPER_ADMIN" && !user.orgId) {
-    return res.status(401).json(missingOrgResponse);
-  }
 
   return res.json({
     id: user.id,
     name: user.name,
     email: user.email ?? null,
     role,
-    orgId: user.orgId,
+    orgId: ensuredOrgId,
   });
 });
 
