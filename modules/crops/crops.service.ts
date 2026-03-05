@@ -62,7 +62,7 @@ export const deleteCrop = async (orgId: string, id: string): Promise<void> => {
 }
 
 /* ============================
-   Crop Varieties (Hibridi/Sortе)
+   Crop Varieties (Hibridi/Sorte)
 ============================ */
 
 export const listCropVarieties = async (orgId: string, cropId: string): Promise<CropVarietyRow[]> => {

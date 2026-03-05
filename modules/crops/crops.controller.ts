@@ -31,7 +31,7 @@ export const removeCrop = asyncHandler(async (req: Request, res: Response) => {
 });
 
 /* ============================
-   Crop Varieties (Hibridi/Sortе)
+   Crop Varieties (Hibridi/Sorte)
 ============================ */
 
 export const getCropVarieties = asyncHandler(async (req: Request, res: Response) => {

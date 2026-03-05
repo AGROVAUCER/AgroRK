@@ -16,7 +16,7 @@ export const updateCropSchema = z.object({
 });
 
 /* ============================
-   Crop Varieties (Hibridi/Sortе)
+   Crop Varieties (Hibridi/Sorte)
 ============================ */
 
 export const createCropVarietySchema = z.object({

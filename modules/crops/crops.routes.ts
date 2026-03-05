@@ -27,7 +27,7 @@ router.post("/", validate(createCropSchema), postCrop);
 router.put("/:id", validate(updateCropSchema), putCrop);
 router.delete("/:id", removeCrop);
 
-/* Varieties (Hibridi/Sortе) */
+/* Varieties (Hibridi/Sorte) */
 router.get("/:cropId/varieties", getCropVarieties);
 router.post("/:cropId/varieties", validate(createCropVarietySchema), postCropVariety);
 router.delete("/:cropId/varieties/:varietyId", validate(deleteCropVarietySchema), removeCropVariety);
